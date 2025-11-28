@@ -17,3 +17,11 @@ chassis_controller:
   wheel_d_gain: 0.0
   wheel_i_max: 10.0
   wheel_i_min: -10.0
+
+  # 速度最大值
+  speed: 10
+  
+# 添加 joint_state_controller 配置
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: 50   # 可选，默认50Hz

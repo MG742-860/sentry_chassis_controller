@@ -49,7 +49,7 @@ private:
     double wheel_base_;
     double pivot_cmd_[4];
     double wheel_cmd_[4];
-    double i_max_, i_min_, speed_;
+    double i_max_, i_min_, i_max_w_, i_min_w_, speed_;
 
     // PID增益和控制器
     struct Gains {
