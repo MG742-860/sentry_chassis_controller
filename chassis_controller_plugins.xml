@@ -1,0 +1,9 @@
+<library path="lib/libmy_controller">
+  <class name="chassis_controller/ChassisController" 
+         type="chassis_controller::ChassisController" 
+         base_class_type="controller_interface::ControllerBase">
+    <description>
+      A chassis controller for omnidirectional mobile base with mecanum wheels.
+    </description>
+  </class>
+</library>

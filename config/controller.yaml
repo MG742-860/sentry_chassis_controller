@@ -1,0 +1,19 @@
+# 底盘控制器配置
+chassis_controller:
+  type: chassis_controller/ChassisController
+  wheel_track: 0.362
+  wheel_base: 0.362
+  
+  # 转向关节PID参数
+  pivot_p_gain: 1.0
+  pivot_i_gain: 0.0
+  pivot_d_gain: 0.0
+  pivot_i_max: 10.0
+  pivot_i_min: -10.0
+  
+  # 轮子速度PID参数
+  wheel_p_gain: 2.0
+  wheel_i_gain: 0.1
+  wheel_d_gain: 0.0
+  wheel_i_max: 10.0
+  wheel_i_min: -10.0
