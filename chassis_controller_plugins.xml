@@ -1,6 +1,6 @@
 <library path="lib/libsentry_chassis_controller">
-  <class name="chassis_controller/ChassisController" 
-         type="chassis_controller::ChassisController" 
+  <class name="sentry_chassis_controller/SentryChassisController" 
+         type="sentry_chassis_controller::SentryChassisController" 
          base_class_type="controller_interface::ControllerBase">
     <description>
       A chassis controller for omnidirectional mobile base with mecanum wheels.

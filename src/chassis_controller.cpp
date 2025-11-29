@@ -43,6 +43,9 @@ bool ChassisController::init(hardware_interface::EffortJointInterface *effort_jo
     gains_wheel_.i_gain_ = controller_nh.param("wheel_i_gain", 0.1);
     gains_wheel_.d_gain_ = controller_nh.param("wheel_d_gain", 0.0);
 
+    //是否锁住底盘，即底盘朝向是否固定
+    is_lock = controller_nh.param("is_lock", false);
+
     // 初始化PID控制器
     pid_lf_.initPid(gains_.p_gain_, gains_.i_gain_, gains_.d_gain_, i_min_, i_max_);
     pid_rf_.initPid(gains_.p_gain_, gains_.i_gain_, gains_.d_gain_, i_min_, i_max_);
@@ -59,23 +62,6 @@ bool ChassisController::init(hardware_interface::EffortJointInterface *effort_jo
     current_cmd_.linear.y = 0.0;
     current_cmd_.angular.z = 0.0;
     received_cmd_ = false;
-
-    // double speed = 8;
-    // // forward
-    // double theta_fwd[4] = {0.0, 0.0, 0.0, 0.0};
-    // double v_fwd[4] = {speed, speed, speed, speed};
-
-    // // backward
-    // double theta_bwd[4] = {0.0, 0.0, 0.0, 0.0};
-    // double v_bwd[4] = {-speed, -speed, -speed, -speed};
-
-    // //  left strafe
-    // double theta_left[4] = {M_PI/2, M_PI/2, M_PI/2, M_PI/2};
-    // double v_left[4] = {speed, speed, speed, speed};
-
-    // // right strafe
-    // double theta_right[4] = {-M_PI/2, -M_PI/2, -M_PI/2, -M_PI/2};
-    // double v_right[4] = {speed, speed, speed, speed};
     
     // 创建订阅器
     cmd_vel_sub_ = nh_.subscribe<geometry_msgs::Twist>("cmd_vel", 1, &ChassisController::cmdVelCallback, this);
@@ -138,24 +124,21 @@ void ChassisController::cmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg
 void ChassisController::calculateWheelCommands(double vx, double vy, double omega) {
     // 万向轮运动学模型
     // 每个轮子的速度是机器人速度在该轮子方向上的投影
+
+    //首先写底盘锁住的情况
+    if( vx ){
+        for (int i = 0; i < 4; i++)
+        {
+            wheel_cmd_[i] = vx;
+        }
+    }
+    if( vy ){
+        for (int i = 0; i < 4; i++)
+        {
+            wheel_cmd_[i] = vy;
+        }
+    }
     
-    // 假设四个万向轮呈X形布置，角度分别为45°, 135°, 225°, 315°
-    const double angle_front_left = M_PI/4.0;    // 45°
-    const double angle_front_right = 3*M_PI/4.0; // 135°
-    const double angle_back_left = -3*M_PI/4.0;  // -135° 或 225°
-    const double angle_back_right = -M_PI/4.0;   // -45° 或 315°
-    
-    // 计算每个轮子的线速度
-    // 轮子速度 = vx * cos(θ) + vy * sin(θ) + omega * R
-    // 其中R是轮子到机器人中心的距离
-    double R = sqrt(wheel_track_*wheel_track_ + wheel_base_*wheel_base_) / 2.0;
-    
-    wheel_cmd_[0] = vx * cos(angle_front_left) + vy * sin(angle_front_left) + omega * R;  // 左前
-    wheel_cmd_[1] = vx * cos(angle_front_right) + vy * sin(angle_front_right) + omega * R; // 右前
-    wheel_cmd_[2] = vx * cos(angle_back_left) + vy * sin(angle_back_left) + omega * R;    // 左后
-    wheel_cmd_[3] = vx * cos(angle_back_right) + vy * sin(angle_back_right) + omega * R;  // 右后
-    
-    // 万向轮没有转向，所以转向命令应该为0
     for (int i = 0; i < 4; i++) {
         pivot_cmd_[i] = 0.0;
     }
@@ -172,7 +155,6 @@ void ChassisController::update(const ros::Time &time, const ros::Duration &perio
     // 检查是否收到过速度命令
     bool active_cmd = false;
     geometry_msgs::Twist current_cmd;
-    
     {
         std::lock_guard<std::mutex> lock(cmd_mutex_);
         if (received_cmd_ && (time - last_cmd_time_).toSec() < 0.5) {
@@ -180,31 +162,24 @@ void ChassisController::update(const ros::Time &time, const ros::Duration &perio
             active_cmd = true;
         }
     }
-    
     if (!active_cmd) {
         // 没有有效命令，停止机器人
         current_cmd.linear.x = 0.0;
         current_cmd.linear.y = 0.0;
         current_cmd.angular.z = 0.0;
-    }
-    
+    } 
     // 根据速度命令计算轮子命令
     calculateWheelCommands(current_cmd.linear.x, current_cmd.linear.y, current_cmd.angular.z);
-    
-    // 只控制轮子速度，不控制转向
-    // 应用PID控制到轮子速度
+
     front_left_wheel_joint_.setCommand(pid_lf_wheel_.computeCommand(wheel_cmd_[0] - front_left_wheel_joint_.getVelocity(), period));
     front_right_wheel_joint_.setCommand(pid_rf_wheel_.computeCommand(wheel_cmd_[1] - front_right_wheel_joint_.getVelocity(), period));
     back_left_wheel_joint_.setCommand(pid_lb_wheel_.computeCommand(wheel_cmd_[2] - back_left_wheel_joint_.getVelocity(), period));
     back_right_wheel_joint_.setCommand(pid_rb_wheel_.computeCommand(wheel_cmd_[3] - back_right_wheel_joint_.getVelocity(), period));
 
-    // 万向轮不需要转向控制，注释掉以下转向控制代码
-    /*
     front_left_pivot_joint_.setCommand(pid_lf_.computeCommand(pivot_cmd_[0] - front_left_pivot_joint_.getPosition(), period));
     front_right_pivot_joint_.setCommand(pid_rf_.computeCommand(pivot_cmd_[1] - front_right_pivot_joint_.getPosition(), period));
     back_left_pivot_joint_.setCommand(pid_lb_.computeCommand(pivot_cmd_[2] - back_left_pivot_joint_.getPosition(), period));
     back_right_pivot_joint_.setCommand(pid_rb_.computeCommand(pivot_cmd_[3] - back_right_pivot_joint_.getPosition(), period));
-    */
 }
 
 // 插件导出宏必须放在命名空间外部

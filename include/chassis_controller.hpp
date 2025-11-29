@@ -21,12 +21,6 @@ public:
     void starting(const ros::Time& time) override;
     void stopping(const ros::Time& time) override;
 
-    // 新增：必须实现的ControllerBase接口
-    // void update(const ros::Time& time, const ros::Duration& period, 
-    //             hardware_interface::RobotHW* robot_hw = nullptr) override {
-    //     update(time, period); // 调用我们自己的update函数
-    // }
-
     // 工具函数
     void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg);
     void calculateWheelCommands(double vx, double vy, double omega);
@@ -44,6 +38,7 @@ private:
     std::mutex cmd_mutex_;
     ros::Time last_cmd_time_;
     bool received_cmd_;
+    bool is_lock;//读取配置文件，是否锁住底盘.
 
     double wheel_track_;
     double wheel_base_;

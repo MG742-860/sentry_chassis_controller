@@ -226,7 +226,7 @@ include_directories(
 )
 include_directories(/include)
 
-add_library(${PROJECT_NAME} src/chassis_controller.cpp)
+add_library(${PROJECT_NAME} src/sentry_chassis_controller.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 # 安装共享库和头文件（可选，但推荐）
 install(TARGETS ${PROJECT_NAME}

@@ -1,6 +1,6 @@
 # 底盘控制器配置
-chassis_controller:
-  type: chassis_controller/ChassisController
+sentry_chassis_controller:
+  type: sentry_chassis_controller/SentryChassisController
   wheel_track: 0.362
   wheel_base: 0.362
   
@@ -8,18 +8,21 @@ chassis_controller:
   pivot_p_gain: 1.0
   pivot_i_gain: 0.0
   pivot_d_gain: 0.0
-  pivot_i_max: 10.0
-  pivot_i_min: -10.0
+  pivot_i_max: 0.0
+  pivot_i_min: 0.0
   
   # 轮子速度PID参数
   wheel_p_gain: 2.0
   wheel_i_gain: 0.1
   wheel_d_gain: 0.0
-  wheel_i_max: 10.0
-  wheel_i_min: -10.0
+  wheel_i_max: 0.0
+  wheel_i_min: 0.0
 
   # 速度最大值
   speed: 10
+
+  # 底盘是否锁住
+  is_lock: false
   
 # 添加 joint_state_controller 配置
 joint_state_controller:
