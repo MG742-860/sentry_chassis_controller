@@ -15,13 +15,12 @@
   <depend>control_toolbox</depend>
   <depend>pluginlib</depend>
   <depend>geometry_msgs</depend>
-  
-  <!-- 移除不需要的依赖 -->
   <depend>gazebo_ros</depend> 
   <depend>controller_manager</depend>
   <depend>joint_state_controller</depend>
   <depend>simple_chassis_controller</depend>
   <depend>control_msgs</depend>
+  <depend>std_msgs</depend>
 
   <!-- 关键：导出插件 -->
   <export>

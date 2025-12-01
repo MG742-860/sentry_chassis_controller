@@ -24,3 +24,14 @@ date：2025.11.28 16：42
 ##### 第三次提交
 log：
 重新写了一份sentry_chassis_controller，抛弃了原来的chassis_controller，现在可以响应/cmd_vel的消息，可以正常使用，但是小车很难操控旋转
+
+hash：54c74d09ea925bd87ab3a685e8db288c28e56254
+
+branch：(HEAD -> master, origin/master)
+
+date：2025.11.29 13：30
+
+##### 第四次提交
+log：
+补全了两种运动模式，并且写了一份CPP版本的键盘控制器，添加了键盘服务器参数，可以正常控制小车运动，小车正常旋转。
+(md为什么用了我一晚上)

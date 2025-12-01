@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   controller_interface
   control_toolbox
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -124,6 +125,7 @@ catkin_package(
     geometry_msgs
     controller_interface
     control_toolbox
+    std_msgs
 )
 
 ###########
@@ -270,4 +272,14 @@ catkin_package(
     control_toolbox
     geometry_msgs
     pluginlib
+)
+
+# 添加可执行文件 teleop_twist_keyboard
+include_directories(/include)
+add_executable(teleop_twist_keyboard src/teleop_twist_keyboard.cpp)
+target_link_libraries(teleop_twist_keyboard ${catkin_LIBRARIES})
+add_dependencies(teleop_twist_keyboard ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+install(TARGETS teleop_twist_keyboard
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

@@ -42,8 +42,12 @@ namespace sentry_chassis_controller {
 
         //底盘和最大速度
         //底盘：是否锁住，也就是朝向是否改变，false为改变，true为不改变
-        is_lock_ = controller_nh.param("is_lock", false);
+        is_forward_lock_ = controller_nh.param("is_forward_lock", false);
         max_speed_ = controller_nh.param("speed", 10);
+        max_angular_ = controller_nh.param("angular", 10);
+
+        //初始化停止时间阈值
+        stop_time_ = controller_nh.param("stop_time", 0.5);
 
         //初始化 twist消息
         gotten_msg.linear.x = 0;
@@ -60,12 +64,53 @@ namespace sentry_chassis_controller {
     void SentryChassisController::CmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg){
         gotten_msg = *msg;
         received_msg_ = true;
+        last_time_ = ros::Time::now();
     }
 
     void SentryChassisController::calculateWheelCommands(double vx, double vy, double angular, bool is_lock){
-        if (is_lock)
+        //先判断键盘是否有消息
+        if (!received_msg_)
         {
+            //如果没有，就停止小车
+            for (int i = 0; i < 4; i++)
+            {
+                wheel_cmd_[i] = 0;
+                pivot_cmd_[i] = 0;
+            }
             return;
+        }
+        //如果有消息，判断是否超过设定的最大值
+        if (abs(vx) > abs(max_speed_))
+        {
+            vx = max_speed_ * (abs(vx) / vx);
+        }
+        if (abs(angular) > abs(max_angular_))
+        {
+            angular = max_angular_ * (abs(angular) / angular);
+        }
+                
+
+        if (is_forward_lock_)
+        {
+            //朝向锁住，先将angular速度归零
+            angular = 0;
+
+            //开始计算角度
+            angular = atan2(vy, vx);
+            double speed = sqrt(vx * vx + vy * vy);
+
+            for (int i = 0; i < 4; i++)
+            {
+                wheel_cmd_[i] = speed;
+                pivot_cmd_[i] = angular;
+            }
+            
+            return;
+        }
+        else
+        {
+            //底盘没有锁住，y方向速度归零
+            vy = 0;
         }
         
         //底盘没有锁住，不需要转动关节
@@ -73,42 +118,34 @@ namespace sentry_chassis_controller {
         {
             pivot_cmd_[i] = 0;
         }
+        //设置x方向速度
         if (vx)
         {
             for (int i = 0; i < 4; i++)
             {
                 wheel_cmd_[i] = vx;
             }
-            return;
         }
-        if (vy)
-        {
-            wheel_cmd_[0] = (-1)*(vy/2);
-            wheel_cmd_[2] = (-1)*(vy/2);
-            wheel_cmd_[1] = vy;
-            wheel_cmd_[3] = vy;
-            return;
-        }
+        //然后加权后设置转向速度
         if (angular)
         {
-            wheel_cmd_[0] = (-1)*angular;
-            wheel_cmd_[2] = (-1)*angular;
-            wheel_cmd_[1] = angular;
-            wheel_cmd_[3] = angular;
-            return;
+            wheel_cmd_[0] -= angular;
+            wheel_cmd_[2] -= angular;
+            wheel_cmd_[1] += angular;
+            wheel_cmd_[3] += angular;
         }
     }
 
     void SentryChassisController::update(const ros::Time &time, const ros::Duration &period){
 
-        if (!received_msg_)
+        //如果时间阈值内键盘没有输入正确的指令，就停止小车
+        if ((time - last_time_).toSec() > stop_time_)
         {
-            gotten_msg.linear.x = 0;
-            gotten_msg.linear.y = 0;
-            gotten_msg.angular.z = 0;
+            received_msg_ = false;
+            last_time_ = time;
         }
 
-        calculateWheelCommands(gotten_msg.linear.x, gotten_msg.linear.y, gotten_msg.angular.z, is_lock_);
+        calculateWheelCommands(gotten_msg.linear.x, gotten_msg.linear.y,gotten_msg.angular.z, is_forward_lock_);
 
         front_left_wheel_joint_.setCommand(pid_fl_wheel_.computeCommand(wheel_cmd_[0]/*6*/ - front_left_wheel_joint_.getVelocity(), period));
         front_right_wheel_joint_.setCommand(pid_fr_wheel_.computeCommand(wheel_cmd_[1] - front_right_wheel_joint_.getVelocity(), period));
@@ -120,7 +157,6 @@ namespace sentry_chassis_controller {
         back_left_pivot_joint_.setCommand(pid_bl_pivot_.computeCommand(pivot_cmd_[2] - back_left_pivot_joint_.getPosition(), period));
         back_right_pivot_joint_.setCommand(pid_br_pivot_.computeCommand(pivot_cmd_[3] - back_right_pivot_joint_.getPosition(), period));
 
-        received_msg_ = false;
     }
     PLUGINLIB_EXPORT_CLASS(sentry_chassis_controller::SentryChassisController, controller_interface::ControllerBase)
 }

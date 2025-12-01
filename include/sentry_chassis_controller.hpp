@@ -16,9 +16,10 @@ namespace sentry_chassis_controller{
             hardware_interface::JointHandle front_left_pivot_joint_, front_right_pivot_joint_, back_left_pivot_joint_, back_right_pivot_joint_;
             hardware_interface::JointHandle front_left_wheel_joint_, front_right_wheel_joint_, back_left_wheel_joint_, back_right_wheel_joint_;
             void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg);
-            void calculateWheelCommands(double vx, double vy, double angular, bool is_lock);
+            void calculateWheelCommands(double vx, double vy,double angular, bool is_lock);
         private:
-            ros::Time time;
+            ros::Time last_time_;
+            double stop_time_;
             double wheel_track_;
             double wheel_base_;
             double pivot_cmd_[4];
@@ -32,8 +33,9 @@ namespace sentry_chassis_controller{
             ros::Subscriber cmd_vel_sub_;
             bool received_msg_;
 
-            bool is_lock_;
+            bool is_forward_lock_;
             double max_speed_;
+            double max_angular_;
     };
 }
 #endif

@@ -1,0 +1,34 @@
+# 键盘控制器服务器参数
+#teleop_twist_keyboard:
+# 发布速度消息的主题名称
+topic: "/cmd_vel"
+
+# 初始线速度和角速度
+initial_linear_x: 0.0
+initial_linear_y: 0.0
+initial_angular_z: 0.0
+
+# 线速度和角速度的初始值和步长
+initial_linear: 0.1
+initial_angular: 0.01
+linear_step: 0.1
+angular_step: 0.01
+
+# 按键映射
+key_bindings:
+  forward: 'w'
+  backward: 's'
+  left: 'a'
+  right: 'd'
+  forward_left: 'q'
+  forward_right: 'e'
+  backward_left: 'z'
+  backward_right: 'c'
+  stop: 'x'
+  increase_linear: 'u'
+  decrease_linear: 'j'
+  increase_angular: 'i'
+  decrease_angular: 'k'
+
+# 发布速度消息的频率（Hz）
+publish_rate: 10

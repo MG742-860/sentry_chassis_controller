@@ -6,11 +6,13 @@
   </include>
 
   <rosparam file="$(find sentry_chassis_controller)/config/controller.yaml" command="load" ns="controller"/>
+  <rosparam file="$(find sentry_chassis_controller)/config/teleop_twist_keyboard.yaml" command="load" ns="teleop_twist_keyboard"/>
   <!-- load the controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
         output="screen" args="
         controller/sentry_chassis_controller
         controller/joint_state_controller    
   "/>
-
+  <!-- load teleop_twist_keyboard node -->
+  <node name="teleop_twist_keyboard" pkg="sentry_chassis_controller" type="teleop_twist_keyboard" launch-prefix="gnome-terminal -e"/>
 </launch>
