@@ -82,6 +82,8 @@ TeleopTwistKeyboard::TeleopTwistKeyboard():nh_("~")
     key_bindings_.decrease_linear = readCharParam(nh_, "key_bindings/decrease_linear", key_bindings_.decrease_linear);
     key_bindings_.increase_angular = readCharParam(nh_, "key_bindings/increase_angular", key_bindings_.increase_angular);
     key_bindings_.decrease_angular = readCharParam(nh_, "key_bindings/decrease_angular", key_bindings_.decrease_angular);
+    key_bindings_.left_rotate = readCharParam(nh_, "key_bindings/left_rotate", key_bindings_.left_rotate);
+    key_bindings_.right_rotate = readCharParam(nh_, "key_bindings/right_rotate", key_bindings_.right_rotate);
     
     // 保存终端设置
     tcgetattr(STDIN_FILENO, &cooked_);
@@ -184,12 +186,12 @@ void TeleopTwistKeyboard::run()
             else if(key == key_bindings_.left)
             {
                 twist_msg_.linear.y = initial_linear_;
-                twist_msg_.angular.z = initial_angular_;
+                //twist_msg_.angular.z = initial_angular_;
             }
             else if(key == key_bindings_.right)
             {
                 twist_msg_.linear.y = -initial_linear_;
-                twist_msg_.angular.z = -initial_angular_;
+                //twist_msg_.angular.z = -initial_angular_;
             }
             else if(key == key_bindings_.stop)
             {
@@ -237,6 +239,14 @@ void TeleopTwistKeyboard::run()
                 if (initial_angular_ < 0.01) initial_angular_ = 0.01;
                 printf("\rAngular step decreased to: %.2f", initial_angular_);
             }
+            else if(key == key_bindings_.left_rotate)
+            {
+                twist_msg_.angular.z = M_PI/4;// M_Pi/4
+            }
+            else if(key == key_bindings_.right_rotate)
+            {
+                twist_msg_.angular.z = -M_PI/4;// -M_Pi/4
+            }
             else if(key == 3) // CTRL+C
             {
                 quit = true;
@@ -246,79 +256,6 @@ void TeleopTwistKeyboard::run()
             {
                 printf("\rUnknown command: %c", key);
             }
-            // switch(key) 
-            // {
-            //     case key_bindings_.forward:
-            //         twist_msg_.linear.x = linear_step_;
-            //         twist_msg_.linear.y = 0.0;
-            //         twist_msg_.angular.z = 0.0;
-            //         break;
-            //     case key_bindings_.backward:
-            //         twist_msg_.linear.x = -linear_step_;
-            //         twist_msg_.linear.y = 0.0;
-            //         twist_msg_.angular.z = 0.0;
-            //         break;
-            //     case key_bindings_.left:
-            //         twist_msg_.linear.x = 0.0;
-            //         twist_msg_.linear.y = linear_step_;
-            //         twist_msg_.angular.z = angular_step_;
-            //         break;
-            //     case key_bindings_.right:
-            //         twist_msg_.linear.x = 0.0;
-            //         twist_msg_.linear.y = -linear_step_;
-            //         twist_msg_.angular.z = -angular_step_;
-            //         break;     
-            //     case key_bindings_.stop:
-            //         twist_msg_.linear.x = 0.0;
-            //         twist_msg_.linear.y = 0.0;
-            //         twist_msg_.angular.z = 0.0;
-            //         break; 
-            //     case key_bindings_.forward_left:
-            //         twist_msg_.linear.x = linear_step_;
-            //         twist_msg_.linear.y = linear_step_;
-            //         twist_msg_.angular.z = 0.0;
-            //         break;
-            //     case key_bindings_.forward_right:
-            //         twist_msg_.linear.x = linear_step_;
-            //         twist_msg_.linear.y = -linear_step_;
-            //         twist_msg_.angular.z = 0.0;
-            //         break;
-            //     case key_bindings_.backward_left:
-            //         twist_msg_.linear.x = -linear_step_;
-            //         twist_msg_.linear.y = linear_step_;
-            //         twist_msg_.angular.z = 0.0;
-            //         break; 
-            //     case key_bindings_.backward_right:
-            //         twist_msg_.linear.x = -linear_step_;
-            //         twist_msg_.linear.y = -linear_step_;
-            //         twist_msg_.angular.z = 0.0;
-            //         break;
-            //     // 调整步长
-            //     case key_bindings_.increase_linear:
-            //         linear_step_ += 0.1;
-            //         printf("\rLinear step increased to: %.2f", linear_step_);
-            //         break;
-            //     case key_bindings_.decrease_linear:
-            //         linear_step_ -= 0.1;
-            //         if (linear_step_ < 0.1) linear_step_ = 0.1;
-            //         printf("\rLinear step decreased to: %.2f", linear_step_);
-            //         break;
-            //     case key_bindings_.increase_angular:
-            //         angular_step_ += 0.01;
-            //         printf("\rAngular step increased to: %.2f", angular_step_);
-            //         break;
-            //     case key_bindings_.decrease_angular:
-            //         angular_step_ -= 0.01;
-            //         if (angular_step_ < 0.01) angular_step_ = 0.01;
-            //         printf("\rAngular step decreased to: %.2f", angular_step_);
-            //         break;   
-            //     case 3: // CTRL+C
-            //         quit = true;
-            //         break;  
-            //     default:
-            //         printf("\rUnknown command: %c", key);
-            //         break;
-            //}
             publishTwist(twist_msg_.linear.x, twist_msg_.linear.y, twist_msg_.angular.z);
             fflush(stdout);
         }

@@ -19,6 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
   controller_interface
   control_toolbox
   std_msgs
+  tf
+  nav_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -126,6 +128,8 @@ catkin_package(
     controller_interface
     control_toolbox
     std_msgs
+    tf
+    nav_msgs
 )
 
 ###########
@@ -272,6 +276,8 @@ catkin_package(
     control_toolbox
     geometry_msgs
     pluginlib
+    tf
+    nav_msgs
 )
 
 # 添加可执行文件 teleop_twist_keyboard

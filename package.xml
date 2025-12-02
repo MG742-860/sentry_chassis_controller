@@ -21,6 +21,8 @@
   <depend>simple_chassis_controller</depend>
   <depend>control_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>tf</depend>
+  <depend>nav_msgs</depend>
 
   <!-- 关键：导出插件 -->
   <export>

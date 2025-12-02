@@ -29,6 +29,8 @@ key_bindings:
   decrease_linear: 'j'
   increase_angular: 'i'
   decrease_angular: 'k'
+  left_rotate: 'f'
+  right_rotate: 'g'
 
 # 发布速度消息的频率（Hz）
 publish_rate: 10

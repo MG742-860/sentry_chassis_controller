@@ -22,6 +22,8 @@ struct gotten_key
     int decrease_linear = 'j';
     int increase_angular = 'i';
     int decrease_angular = 'k';
+    int left_rotate = 'f';
+    int right_rotate = 'g';
     bool valid = false;
 };
 

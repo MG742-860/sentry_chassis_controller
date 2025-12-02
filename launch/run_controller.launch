@@ -4,7 +4,10 @@
     <arg name="roller_type" value="realistic"/>
     <arg name="paused" value="true"/>
   </include>
-
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+        respawn="false" output="screen">
+    <remap from="/joint_states" to="/controller/joint_states" />
+  </node>
   <rosparam file="$(find sentry_chassis_controller)/config/controller.yaml" command="load" ns="controller"/>
   <rosparam file="$(find sentry_chassis_controller)/config/teleop_twist_keyboard.yaml" command="load" ns="teleop_twist_keyboard"/>
   <!-- load the controllers -->

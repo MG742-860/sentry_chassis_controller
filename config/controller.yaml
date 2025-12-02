@@ -3,6 +3,7 @@ sentry_chassis_controller:
   type: sentry_chassis_controller/SentryChassisController
   wheel_track: 0.362
   wheel_base: 0.362
+  wheel_radius: 0.0762
   
   # 转向关节PID参数
   pivot_p_gain: 1.0
@@ -26,8 +27,22 @@ sentry_chassis_controller:
   stop_time: 0.5
 
   # 底盘是否锁住
-  is_forward_lock: true
+  is_forward_lock: false
+
+  # 小陀螺系数控制
+  speed_to_rotate: 100
+
+  # 信息打印
+  print_expected_speed: true
+  print_expected_pivot: false
   
+  # 里程计发布配置
+  publish_odom: true
+  publish_tf: true
+  odom_frame_id: "odom"
+  base_frame_id: "base_link"
+  tf_publish_period: 0.05  # 发布TF的周期，单位秒
+
 # 添加 joint_state_controller 配置
 joint_state_controller:
   type: joint_state_controller/JointStateController
