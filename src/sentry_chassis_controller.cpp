@@ -1,13 +1,15 @@
 #include "../include/sentry_chassis_controller.hpp"
 #include <pluginlib/class_list_macros.hpp>
-#include <cmath>
+
 
 namespace sentry_chassis_controller {
     bool SentryChassisController::init(hardware_interface::EffortJointInterface *effort_joint_interface, ros::NodeHandle &root_nh, ros::NodeHandle &controller_nh)
     {
+
         //获取打印参数
         print_expected_speed_ = controller_nh.param("print_expected_speed", false);
         print_expected_pivot_ = controller_nh.param("print_expected_pivot", false);
+        odom_show_ = controller_nh.param("print_odom", false);
         
         //初始化关节
         front_left_pivot_joint_ = effort_joint_interface->getHandle("left_front_pivot_joint");
@@ -39,10 +41,10 @@ namespace sentry_chassis_controller {
         pid_bl_pivot_.initPid(gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_, gains_pivot_.i_min_, gains_pivot_.i_max_);
         pid_br_pivot_.initPid(gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_, gains_pivot_.i_min_, gains_pivot_.i_max_);
 
-        pid_fl_wheel_.initPid(gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_, gains_pivot_.i_min_, gains_pivot_.i_max_);
-        pid_fr_wheel_.initPid(gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_, gains_pivot_.i_min_, gains_pivot_.i_max_);
-        pid_bl_wheel_.initPid(gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_, gains_pivot_.i_min_, gains_pivot_.i_max_);
-        pid_br_wheel_.initPid(gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_, gains_pivot_.i_min_, gains_pivot_.i_max_);
+        pid_fl_wheel_.initPid(gains_wheel_.p_gain_, gains_wheel_.i_gain_, gains_wheel_.d_gain_, gains_wheel_.i_min_, gains_wheel_.i_max_);
+        pid_fr_wheel_.initPid(gains_wheel_.p_gain_, gains_wheel_.i_gain_, gains_wheel_.d_gain_, gains_wheel_.i_min_, gains_wheel_.i_max_);
+        pid_bl_wheel_.initPid(gains_wheel_.p_gain_, gains_wheel_.i_gain_, gains_wheel_.d_gain_, gains_wheel_.i_min_, gains_wheel_.i_max_);
+        pid_br_wheel_.initPid(gains_wheel_.p_gain_, gains_wheel_.i_gain_, gains_wheel_.d_gain_, gains_wheel_.i_min_, gains_wheel_.i_max_);
 
         //底盘和最大速度
         //底盘：是否锁住，也就是朝向是否改变，false为改变，true为不改变
@@ -58,6 +60,15 @@ namespace sentry_chassis_controller {
         gotten_msg.angular.z = 0;
         received_msg_ = false;
 
+        //初始化关节状态发布者
+        joint_state_pub_ = nh_.advertise<sensor_msgs::JointState>("controller/joint_states", 10);
+        joint_names_ = {"left_front_pivot_joint", "right_front_pivot_joint", "left_back_pivot_joint", "right_back_pivot_joint",
+                        "left_front_wheel_joint", "right_front_wheel_joint", "left_back_wheel_joint", "right_back_wheel_joint"};
+        joint_state_msg_.name = joint_names_;
+        joint_state_msg_.position.resize(joint_names_.size(), 0.0);
+        joint_state_msg_.velocity.resize(joint_names_.size(), 0.0);
+        joint_state_msg_.effort.resize(joint_names_.size(), 0.0);
+
         //初始化订阅者
         cmd_vel_sub_ = nh_.subscribe<geometry_msgs::Twist>("cmd_vel", 1, &SentryChassisController::CmdVelCallback, this);
         last_angular_ = 0.0;
@@ -69,6 +80,7 @@ namespace sentry_chassis_controller {
 
         //初始化里程计发布者
         last_tf_publish_time_ = ros::Time::now();
+        odom_broadcaster_ = tf2_ros::TransformBroadcaster();
         tf_publish_period_ = controller_nh.param("tf_publish_period", 0.05);
         publish_odom_ = controller_nh.param("publish_odom", true);
         publish_tf_ = controller_nh.param("publish_tf", true);
@@ -88,7 +100,6 @@ namespace sentry_chassis_controller {
         rob_state_.omega = 0.0;
         rob_state_.wheel_radius = 0.076; //假设轮子半径
 
-
         ROS_INFO("Sentry Chassis Controller initialized");
         ROS_INFO("Wheel track: %.3f m, Wheel base: %.3f m", wheel_track_, wheel_base_);
         ROS_INFO("Wheel radius: %.3f m", rob_state_.wheel_radius);
@@ -98,7 +109,7 @@ namespace sentry_chassis_controller {
     void SentryChassisController::CmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
     {
         gotten_msg = *msg;
-        last_angular_ = gotten_msg.angular.z ? gotten_msg.angular.z : last_angular_;
+        last_angular_ = (gotten_msg.angular.z && (abs(gotten_msg.angular.z) - abs(M_PI/4)) > 1e-2)? gotten_msg.angular.z : last_angular_;
         received_msg_ = true;
         last_time_ = ros::Time::now();
     }
@@ -269,7 +280,7 @@ namespace sentry_chassis_controller {
         
         //调试输出
         static int odom_count = 0;
-        if (++odom_count % 100 == 0) // 每100次打印一次
+        if (++odom_count % 100 == 0 && odom_show_) // 每100次打印一次
         {
             ROS_INFO("Odometry Update: x=%.3f, y=%.3f, theta=%.3f, vx=%.3f, vy=%.3f, omega=%.3f", rob_state_.x, rob_state_.y, rob_state_.theta, rob_state_.vx, rob_state_.vy, rob_state_.omega);
             odom_count = 0;// 打印后重置计数器
@@ -293,8 +304,10 @@ namespace sentry_chassis_controller {
         odom.pose.pose.position.y = rob_state_.y;
         odom.pose.pose.position.z = 0.0;
 
-        //设置姿态(四元数)
-        geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(rob_state_.theta);
+        //设置姿态(四元数)   
+        tf2::Quaternion q;
+        q.setRPY(0, 0, rob_state_.theta);
+        geometry_msgs::Quaternion odom_quat = tf2::toMsg(q);
         odom.pose.pose.orientation = odom_quat;
 
         //设置协方差矩阵
@@ -322,16 +335,51 @@ namespace sentry_chassis_controller {
             double dt = (current_time - last_tf_publish_time_).toSec();
             if (dt > tf_publish_period_)
             {
-                tf::Transform transform;
-                transform.setOrigin(tf::Vector3(rob_state_.x, rob_state_.y, 0.0));
-                tf::Quaternion q;
-                q.setRPY(0, 0, rob_state_.theta);
-                transform.setRotation(q);
-                odom_broadcaster_.sendTransform(tf::StampedTransform(transform, current_time, odom_frame_id_, base_frame_id_));
-            }
-            last_tf_publish_time_ = current_time;//更新最后发布里程计的时间
-        }
-        
+                geometry_msgs::TransformStamped transformStamped;
+                transformStamped.header.stamp = current_time;
+                transformStamped.header.frame_id = odom_frame_id_;
+                transformStamped.child_frame_id = base_frame_id_;
+                
+                transformStamped.transform.translation.x = rob_state_.x;
+                transformStamped.transform.translation.y = rob_state_.y;
+                transformStamped.transform.translation.z = 0.0;
+                transformStamped.transform.rotation = odom_quat;
+
+                //发布变换
+                odom_broadcaster_.sendTransform(transformStamped);
+                last_tf_publish_time_ = current_time;//更新最后发布里程计的时间
+            }           
+        }     
+    }
+
+    void SentryChassisController::publishJointStates(){
+        // 更新关节状态
+        ros::Time time = ros::Time::now();
+        joint_state_msg_.header.stamp = time;
+
+        // 获取关节位置和速度
+        joint_state_msg_.position[0] = front_left_pivot_joint_.getPosition();
+        joint_state_msg_.position[1] = front_right_pivot_joint_.getPosition();
+        joint_state_msg_.position[2] = back_left_pivot_joint_.getPosition();
+        joint_state_msg_.position[3] = back_right_pivot_joint_.getPosition();
+
+        joint_state_msg_.position[4] = front_left_wheel_joint_.getPosition();
+        joint_state_msg_.position[5] = front_right_wheel_joint_.getPosition();
+        joint_state_msg_.position[6] = back_left_wheel_joint_.getPosition();
+        joint_state_msg_.position[7] = back_right_wheel_joint_.getPosition();
+
+        joint_state_msg_.velocity[0] = front_left_pivot_joint_.getVelocity();
+        joint_state_msg_.velocity[1] = front_right_pivot_joint_.getVelocity();
+        joint_state_msg_.velocity[2] = back_left_pivot_joint_.getVelocity();
+        joint_state_msg_.velocity[3] = back_right_pivot_joint_.getVelocity();
+
+        joint_state_msg_.velocity[4] = front_left_wheel_joint_.getVelocity();
+        joint_state_msg_.velocity[5] = front_right_wheel_joint_.getVelocity();
+        joint_state_msg_.velocity[6] = back_left_wheel_joint_.getVelocity();
+        joint_state_msg_.velocity[7] = back_right_wheel_joint_.getVelocity();
+
+        // 发布关节状态
+        joint_state_pub_.publish(joint_state_msg_);
     }
 
     void SentryChassisController::setSpeedPivot(const ros::Duration &period)
@@ -347,6 +395,21 @@ namespace sentry_chassis_controller {
         back_right_pivot_joint_.setCommand(pid_br_pivot_.computeCommand(pivot_cmd_[3] - back_right_pivot_joint_.getPosition(), period));
     }
 
+    void SentryChassisController::starting(const ros::Time& time)
+    {
+        // 初始化控制器的起始状态
+        last_time_ = time;
+        last_tf_publish_time_ = time;
+        received_msg_ = false;
+        gotten_msg.linear.x = 0;
+        gotten_msg.linear.y = 0;
+        gotten_msg.angular.z = 0;
+    }
+
+    void SentryChassisController::stopping(const ros::Time& time)
+    {
+    }
+
     void SentryChassisController::update(const ros::Time &time, const ros::Duration &period)
     {
         //如果时间阈值内键盘没有输入正确的指令，就停止小车
@@ -360,6 +423,8 @@ namespace sentry_chassis_controller {
         //计算并发布里程计
         calculateOdometry(period);
         publishOdometry();
+        //发布关节状态
+        publishJointStates();
     }
     PLUGINLIB_EXPORT_CLASS(sentry_chassis_controller::SentryChassisController, controller_interface::ControllerBase)
 }

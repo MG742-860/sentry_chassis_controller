@@ -35,6 +35,7 @@ sentry_chassis_controller:
   # 信息打印
   print_expected_speed: true
   print_expected_pivot: false
+  print_odom: false
   
   # 里程计发布配置
   publish_odom: true

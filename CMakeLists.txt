@@ -20,6 +20,9 @@ find_package(catkin REQUIRED COMPONENTS
   control_toolbox
   std_msgs
   tf
+  tf2_ros
+  tf2
+  tf2_geometry_msgs
   nav_msgs
 )
 
@@ -129,6 +132,9 @@ catkin_package(
     control_toolbox
     std_msgs
     tf
+    tf2_ros
+    tf2
+    tf2_geometry_msgs
     nav_msgs
 )
 
@@ -277,6 +283,9 @@ catkin_package(
     geometry_msgs
     pluginlib
     tf
+    tf2_ros
+    tf2
+    tf2_geometry_msgs
     nav_msgs
 )
 
