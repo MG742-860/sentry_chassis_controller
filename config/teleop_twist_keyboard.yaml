@@ -3,6 +3,9 @@
 # 发布速度消息的主题名称
 topic: "/cmd_vel"
 
+# 是否启用方向锁定功能
+is_forward_lock: false
+
 # 初始线速度和角速度
 initial_linear_x: 0.0
 initial_linear_y: 0.0

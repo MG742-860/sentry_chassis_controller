@@ -49,5 +49,6 @@ private:
     double angular_step_;
     struct termios cooked_, raw_;
     gotten_key key_bindings_;
+    bool is_forward_lock_;
 };
 #endif  //_TELEOP_TEIST_KEYBOARD_HPP_
