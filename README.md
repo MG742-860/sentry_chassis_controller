@@ -58,8 +58,18 @@ date：2025.12.2 23：40
 log：
 修复了正运动学发布里程计bug，现在可以在rviz中正常显示，修复了键盘控制器执行小陀螺后角度数值过大（M_PI/4）的bug，更新了部分文件参数。
 
-hash：
+hash：637e7c4b763ea0c0c1ffdbb6660727789a04cb9e
 
 branch：(HEAD -> master, origin/master)
 
 date：2025.12.3 23：17
+
+##### 第七次提交
+log：
+修正了键盘控制器消息发布逻辑，现在需要设置控制小车模式了。
+
+hash：
+
+branch：(HEAD -> master, origin/master)
+
+date：2025 12.4 
