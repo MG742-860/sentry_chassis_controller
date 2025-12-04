@@ -27,7 +27,7 @@ sentry_chassis_controller:
   stop_time: 0.5
 
   # 底盘是否锁住
-  is_forward_lock: false
+  is_forward_lock: true
 
   # 小陀螺系数控制
   speed_to_rotate: 100

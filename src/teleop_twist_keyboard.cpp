@@ -39,6 +39,7 @@ TeleopTwistKeyboard::TeleopTwistKeyboard():nh_("~")
     linear_step_ = 0.1;
     angular_step_ = 0.01;
     pub_rate_ = 10; // 10 Hz
+    is_forward_lock_ = false;
 
     // 初始化发布器
     nh_.param("topic", sub_topic_, std::string("cmd_vel"));
@@ -68,6 +69,7 @@ TeleopTwistKeyboard::TeleopTwistKeyboard():nh_("~")
     nh_.param("initial_angular", initial_angular_, initial_angular_);
     nh_.param("linear_step", linear_step_, linear_step_);
     nh_.param("angular_step", angular_step_, angular_step_);
+    nh_.param("is_forward_lock", is_forward_lock_, is_forward_lock_);
     
     key_bindings_.forward = readCharParam(nh_, "key_bindings/forward", key_bindings_.forward);
     key_bindings_.backward = readCharParam(nh_, "key_bindings/backward", key_bindings_.backward);
@@ -186,12 +188,12 @@ void TeleopTwistKeyboard::run()
             else if(key == key_bindings_.left)
             {
                 twist_msg_.linear.y = initial_linear_;
-                //twist_msg_.angular.z = initial_angular_;
+                 if (!is_forward_lock_) twist_msg_.angular.z = initial_angular_;
             }
             else if(key == key_bindings_.right)
             {
                 twist_msg_.linear.y = -initial_linear_;
-                //twist_msg_.angular.z = -initial_angular_;
+                 if (!is_forward_lock_) twist_msg_.angular.z = -initial_angular_;
             }
             else if(key == key_bindings_.stop)
             {

@@ -205,15 +205,11 @@ namespace sentry_chassis_controller {
             {
                 wheel_cmd_[i] = vx;
             }
-        }
-        if (vy && !vx)
-        {
-            angular = last_angular_ * (abs(vy) / vy);
-        }
-        
+        }   
         //然后加权后设置转向速度
         if (angular)
         {
+            //ROS_INFO("Adding angular velocity: %f", angular);
             wheel_cmd_[0] -= angular;
             wheel_cmd_[2] -= angular;
             wheel_cmd_[1] += angular;
