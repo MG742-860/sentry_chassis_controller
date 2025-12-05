@@ -26,37 +26,66 @@ namespace sentry_chassis_controller{
     
     class SentryChassisController : public controller_interface::Controller<hardware_interface::EffortJointInterface>{
         public:
+            //默认构造函数和析构函数
             SentryChassisController() = default;
             ~SentryChassisController() override = default;
+
+            //获取并设置关节句柄和参数
+            void get_joint(hardware_interface::EffortJointInterface *effort_joint_interface, ros::NodeHandle &root_nh, ros::NodeHandle &controller_nh);
+            void get_parameters(ros::NodeHandle &controller_nh);
+            void get_pid_parameters(ros::NodeHandle &controller_nh);
+            void init_pid_parameters(ros::NodeHandle &controller_nh);
+            void setSpeedPivot(const ros::Duration &period);
+            void reset_pid();
+
+            //发布关节状态
+            void publishJointStates();
+
+            //回调函数
+            void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg);
+            void convertToRobotFrame(double& robot_x, double& robot_y, double& robot_angular);//(轮子)坐标变换函数 odom -> base_link
+            void calculateWheelCommands(double vx, double vy,double angular);
+
+            //里程计相关函数
+            void calculateOdometry(const ros::Duration& period);
+            void publishOdometry();
+            
+
+
+            //打印测试函数
+            void printExpectedSpeed();
+
+            //重写基类函数
             void starting(const ros::Time& time) override;
             void stopping(const ros::Time& time) override;
             bool init(hardware_interface::EffortJointInterface *effort_joint_interface, ros::NodeHandle &root_nh, ros::NodeHandle &controller_nh) override;
             void update(const ros::Time &time, const ros::Duration &period) override;
+        private:
+            //关节句柄类
             hardware_interface::JointHandle front_left_pivot_joint_, front_right_pivot_joint_, back_left_pivot_joint_, back_right_pivot_joint_;
             hardware_interface::JointHandle front_left_wheel_joint_, front_right_wheel_joint_, back_left_wheel_joint_, back_right_wheel_joint_;
-            void setSpeedPivot(const ros::Duration &period);
-            void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg);
-            void calculateWheelCommands(double vx, double vy,double angular);
-            void printExpectedSpeed();
-            void calculateOdometry(const ros::Duration& period);
-            void publishOdometry();
-            void publishJointStates();
-        private:
-            ros::Time last_time_;
-            double stop_time_;
+            double wheel_cmd_[4], pivot_cmd_[4];
             double wheel_track_, wheel_base_;
-            double pivot_cmd_[4];
-            double wheel_cmd_[4];
+            //关节发布
+            ros::Publisher joint_state_pub_;
+            sensor_msgs::JointState joint_state_msg_;
+            std::vector<std::string> joint_names_;
+   
+            //PID控制器
             control_toolbox::Pid pid_fl_pivot_, pid_fr_pivot_, pid_bl_pivot_, pid_br_pivot_;
             control_toolbox::Pid pid_fl_wheel_, pid_fr_wheel_, pid_bl_wheel_, pid_br_wheel_;
             control_toolbox::Pid::Gains gains_pivot_, gains_wheel_;
-            //订阅 /cmd_vel 相关
+
+            // /cmd_vel 相关
             ros::NodeHandle nh_;
             geometry_msgs::Twist gotten_msg;
             double last_angular_;
             ros::Subscriber cmd_vel_sub_;
             bool received_msg_;
-            //订阅 /odom 相关
+            ros::Time last_time_;
+            double stop_time_;
+
+            // /odom 相关
             ros::Publisher odom_pub_;
             tf2_ros::TransformBroadcaster odom_broadcaster_;
             ros::Time last_tf_publish_time_;
@@ -65,16 +94,12 @@ namespace sentry_chassis_controller{
             bool publish_tf_, publish_odom_;
             std::string odom_frame_id_, base_frame_id_;
 
-            //关节发布
-            ros::Publisher joint_state_pub_;
-            sensor_msgs::JointState joint_state_msg_;
-            std::vector<std::string> joint_names_;
-
             //其他参数
             int speed_to_rotate_;
             bool print_expected_speed_, print_expected_pivot_, odom_show_;
-            bool is_forward_lock_;
+            bool enable_global_chassis_;
             double max_speed_, max_angular_;
+            bool coordinate_mode_;  // false: 底盘坐标系，true: 全局坐标系
     };
 }
 #endif

@@ -20,15 +20,19 @@ sentry_chassis_controller:
   wheel_i_min: 0.0
 
   # 速度和转向最大值
-  speed: 10
-  angular: 10
+  max_speed: 10
+  max_angular: 10
 
   # 小车无输入信号停止阈值
   stop_time: 0.5
 
   # 底盘是否锁住
-  is_forward_lock: true
+  # is_forward_lock: true
 
+  # 坐标系配置
+  coordinate_mode: true
+  global_frame_id: "odom"
+  robot_base_frame_id: "base_link"
   # 小陀螺系数控制
   speed_to_rotate: 100
 
@@ -47,4 +51,4 @@ sentry_chassis_controller:
 # 添加 joint_state_controller 配置
 joint_state_controller:
   type: joint_state_controller/JointStateController
-  publish_rate: 50   # 可选，默认50Hz
+  publish_rate: 50   # 默认50Hz

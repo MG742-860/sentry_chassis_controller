@@ -68,8 +68,23 @@ date：2025.12.3 23：17
 log：
 修正了键盘控制器消息发布逻辑，现在需要设置控制小车模式了。
 
+hash：f697de3214bb4c397ef7a63bcdcda5aa21afbbd4
+
+branch：(HEAD -> master, origin/master)
+
+date：2025 12.4 23：17
+
+##### 第八次提交
+log：
+删除了履带移动模式(即轮子没有旋转角度，靠左右轮速度差进行转向)。
+添加了全局坐标系模式。
+重新构建了代码：
+* 所有函数单独定义
+* 更加容易阅读
+* 模块化程度更高
+
 hash：
 
 branch：(HEAD -> master, origin/master)
 
-date：2025 12.4 
+date：2025.12.5 
