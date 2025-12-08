@@ -14,6 +14,19 @@
 #include <memory>
 namespace sentry_chassis_controller{
 
+    enum DriveMode{
+        ForwardDrive = 0,//前驱
+        BackwardDrive = 1,//后驱
+        AllDrive = 2//四驱
+    };
+
+    enum TurnMode{
+        ForwardTurn = 0,//前转
+        BackwardTurn = 1,//后转
+        AllTurn = 2,//全转
+        NoneTurn =3//履带-不转
+    };
+
     struct rob_state{
         double x;           // x位置 (m)
         double y;           // y位置 (m)
@@ -44,14 +57,16 @@ namespace sentry_chassis_controller{
             //回调函数
             void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg);
             void convertToRobotFrame(double& robot_x, double& robot_y, double& robot_angular);//(轮子)坐标变换函数 odom -> base_link
+            //计算轮子速度和转向角度
+            void calculateWheel(double direction, double speed);
+            void calculatePivot(double direction,double angular);
             void calculateWheelCommands(double vx, double vy,double angular);
+            void handleDifferentialSteering(double angular);  //处理差速转向
 
             //里程计相关函数
             void calculateOdometry(const ros::Duration& period);
             void publishOdometry();
             
-
-
             //打印测试函数
             void printExpectedSpeed();
 
@@ -94,12 +109,20 @@ namespace sentry_chassis_controller{
             bool publish_tf_, publish_odom_;
             std::string odom_frame_id_, base_frame_id_;
 
+            //驱动和转向模式
+            DriveMode drive_mode_;
+            TurnMode turn_mode_;
+
             //其他参数
             int speed_to_rotate_;
             bool print_expected_speed_, print_expected_pivot_, odom_show_;
-            bool enable_global_chassis_;
-            double max_speed_, max_angular_;
+            double max_speed_, max_angular_, max_direction_;
             bool coordinate_mode_;  // false: 底盘坐标系，true: 全局坐标系
+
+            //当前小车状态-计算状态
+            double current_speed_;//当前线速度
+            double current_direction_;//当前运动方向(角度)
+            double current_angular_;//当前角速度
     };
 }
 #endif

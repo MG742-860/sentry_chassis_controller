@@ -23,9 +23,11 @@ namespace sentry_chassis_controller {
         //轮距轴距
         wheel_track_ = controller_nh.param("wheel_track", 0.5);
         wheel_base_ = controller_nh.param("wheel_base", 0.5);
-        //速度和角度
+        //速度、角度、转角最大值限制
         max_speed_ = controller_nh.param("max_speed", 1.0);
         max_angular_ = controller_nh.param("max_angular", 1.0);
+        double max_direction_c = controller_nh.param("max_direction", 90.0);
+        max_direction_ = max_direction_c * M_PI / 180.0; // 转化为弧度
         //小陀螺系数
         speed_to_rotate_ = controller_nh.param("speed_to_rotate", 100.0);
         //没有指令时停止小车阈值
@@ -42,6 +44,52 @@ namespace sentry_chassis_controller {
         base_frame_id_ = controller_nh.param("base_frame_id", std::string("base_link"));
         //坐标系选择
         coordinate_mode_ = controller_nh.param("coordinate_mode", false); // false: 底盘坐标系，true: 全局坐标系
+
+        // 驱动模式和转向模式
+        int drive_mode = controller_nh.param("drive_mode", 2);  // 默认全驱
+        int turn_mode = controller_nh.param("turn_mode", 2);    // 默认全轮转向
+        //转化为枚举类型
+        switch (drive_mode) 
+        {
+            case 0:
+                drive_mode_ = DriveMode::ForwardDrive;
+                break;
+            case 1:
+                drive_mode_ = DriveMode::BackwardDrive;
+                break;
+            case 2:
+                drive_mode_ = DriveMode::AllDrive;
+                break;
+            default:
+                drive_mode_ = DriveMode::AllDrive;
+                break;
+        }
+        switch (turn_mode) 
+        {
+            case 0:
+                turn_mode_ = TurnMode::ForwardTurn;
+                break;
+            case 1:
+                turn_mode_ = TurnMode::BackwardTurn;
+                break;
+            case 2:
+                turn_mode_ = TurnMode::AllTurn;
+                break;
+            case 3:
+                turn_mode_ = TurnMode::NoneTurn;
+                break;
+            default:
+                turn_mode_ = TurnMode::AllTurn;
+                break;
+        }
+        //全向一定是全驱
+        if (turn_mode_ == TurnMode::AllTurn) {
+            drive_mode_ = DriveMode::AllDrive;
+        }
+        //初始化当前状态
+        current_speed_ = 0.0;
+        current_direction_ = 0.0;
+        current_angular_ = 0.0;
     }
 
     void SentryChassisController::get_pid_parameters(ros::NodeHandle &controller_nh)
@@ -138,22 +186,125 @@ namespace sentry_chassis_controller {
 
     void SentryChassisController::convertToRobotFrame(double& robot_x, double& robot_y, double& robot_angular)
     {
-        if (!coordinate_mode_)
-        {
-            // 底盘坐标系，无需转换
-            return;
-        }
-        else
+        if (coordinate_mode_)// 全局坐标系才进行转换
         {
             // 全局坐标系，进行转换
-            double theta = rob_state_.theta;//获取当前机器人朝向角
+            double theta = rob_state_.theta;// 获取当前机器人朝向角
+            // 先获取原始值
             double global_x = robot_x;
             double global_y = robot_y;
-
+            // 进行坐标变换
             robot_x = global_x * cos(theta) + global_y * sin(theta);
             robot_y = -global_x * sin(theta) + global_y * cos(theta);
             // 角速度在全局和底盘坐标系下相同，无需转换
             return;
+        }
+    }
+
+    void SentryChassisController::calculateWheel(const double direction, const double speed)
+    {
+        // 根据驱动模式调整轮子速度
+        switch (drive_mode_)
+        {
+            case ForwardDrive://前驱
+                wheel_cmd_[0] = speed;//左前
+                wheel_cmd_[1] = speed;//右前
+                wheel_cmd_[2] = 0;//左后
+                wheel_cmd_[3] = 0;//右后
+                break;
+            case BackwardDrive://后驱
+                wheel_cmd_[0] = 0;//左前
+                wheel_cmd_[1] = 0;//右前
+                wheel_cmd_[2] = speed;//左后
+                wheel_cmd_[3] = speed;//右后
+                break;
+            case AllDrive://全驱(默认)
+            default:
+                for (int i = 0; i < 4; i++)
+                {
+                    wheel_cmd_[i] = speed;
+                }
+                break;
+        }
+    }
+
+    void SentryChassisController::calculatePivot(const double direction_src, const double angular)//传入的是方向角、角速度
+    {
+        double direction = direction_src;//获取原始角度
+        //限制角度
+        if (abs(direction) > max_direction_)
+        {
+            direction = max_direction_ * (abs(direction) / direction);
+        }
+
+        // 根据转向模式调整轮子转向角度
+        switch (turn_mode_)
+        {
+            case ForwardTurn://前轮转向
+                pivot_cmd_[0] = direction;//左前
+                pivot_cmd_[1] = direction;//右前
+                pivot_cmd_[2] = 0;//左后
+                pivot_cmd_[3] = 0;//右后
+                break;
+            case BackwardTurn://后轮转向
+                pivot_cmd_[0] = 0;//左前
+                pivot_cmd_[1] = 0;//右前
+                pivot_cmd_[2] = direction;//左后
+                pivot_cmd_[3] = direction;//右后
+                break;
+            case AllTurn://全轮转向(默认)
+                for (int i = 0; i < 4; i++)
+                {
+                    pivot_cmd_[i] = direction;
+                }
+                
+                break;
+            case NoneTurn://不转向
+                for (int i = 0; i < 4; i++)
+                {
+                    pivot_cmd_[i] = 0;
+                }
+                //然后应用差速转向(修改轮子速度)
+                handleDifferentialSteering(angular);
+                break;
+            default:
+                // 不做任何限制
+                break;
+        }
+    }
+
+    void SentryChassisController::handleDifferentialSteering(double angular)
+    {
+        if (fabs(angular) < 1e-6) 
+        {
+            return;  // 没有角速度，不需要差速
+        }
+        
+        // 计算差速调整量
+        // 差速公式：omega = (v_right - v_left) / wheel_track
+        // 所以：v_right - v_left = omega * wheel_track
+        double speed_diff = angular * wheel_track_ / 2.0;
+        
+        // 根据驱动模式应用差速
+        switch (drive_mode_) 
+        {
+            case ForwardDrive:  // 前驱差速
+                wheel_cmd_[0] -= speed_diff;  // 左前轮减速
+                wheel_cmd_[1] += speed_diff;  // 右前轮加速
+                break;
+                
+            case BackwardDrive:  // 后驱差速
+                wheel_cmd_[2] -= speed_diff;  // 左后轮减速
+                wheel_cmd_[3] += speed_diff;  // 右后轮加速
+                break;
+                
+            case AllDrive:  // 四驱差速
+            default:
+                wheel_cmd_[0] -= speed_diff;  // 左前轮减速
+                wheel_cmd_[1] += speed_diff;  // 右前轮加速
+                wheel_cmd_[2] -= speed_diff;  // 左后轮减速
+                wheel_cmd_[3] += speed_diff;  // 右后轮加速
+                break;
         }
     }
 
@@ -189,11 +340,9 @@ namespace sentry_chassis_controller {
             angular = max_angular_ * (abs(angular) / angular);
         }       
 
-
-        //开始计算角度
+        //如果有角速度但是没有线速度，就原地转圈
         if ((abs(angular) > 1e-6) && (sqrt(vx*vx + vy*vy) < 1e-6))
         {
-            //如果有角速度但是没有线速度，就原地转圈
             for (int i = 0; i < 4; i++)
             {
                 wheel_cmd_[i] = speed_to_rotate_ * angular;
@@ -205,20 +354,24 @@ namespace sentry_chassis_controller {
             printExpectedSpeed();
             return;
         }
-        double direction = atan2(vy, vx);
+
+        //计算方向和速度
+        double direction = atan2(vy, vx);//方向角，不是角速度
         double speed = sqrt(vx * vx + vy * vy);
-        for (int i = 0; i < 4; i++)
-        {
-            wheel_cmd_[i] = speed;
-            pivot_cmd_[i] = direction;
-        }
+        speed = std::min(speed, max_speed_); // 限制最大速度
+        speed = speed * ((direction / direction) < 1e-4 ? 1 : (abs(direction) / direction));//速度矢量化
+
+        //使用新的函数处理差速转向
+        calculateWheel(direction, speed);
+        calculatePivot(direction, angular);//传入的是方向角和角速度
+
         printExpectedSpeed();
         return;
     }
 
     void SentryChassisController::calculateOdometry(const ros::Duration& period)
     {
-        // 获取实际轮子速度（m/s）
+        // 获取实际轮子速度(m/s)
         double fl_wheel_vel = front_left_wheel_joint_.getVelocity();
         double fr_wheel_vel = front_right_wheel_joint_.getVelocity();
         double bl_wheel_vel = back_left_wheel_joint_.getVelocity();

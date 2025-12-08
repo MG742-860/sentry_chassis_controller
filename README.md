@@ -83,8 +83,22 @@ log：
 * 更加容易阅读
 * 模块化程度更高
 
+hash：745e1da3fce2b39446bee6f76c4acac978f3fb8a
+
+branch：(HEAD -> master, origin/master)
+
+date：2025.12.5 19：05
+
+##### 第九次提交
+log：
+添加特色功能：
+* 前驱、后驱、全驱
+* 履带、前转向、后转向、全向
+**全向一定是全驱**。
+测试中效果并不理想。
+
 hash：
 
 branch：(HEAD -> master, origin/master)
 
-date：2025.12.5 
+date：2025.12.8 21：31

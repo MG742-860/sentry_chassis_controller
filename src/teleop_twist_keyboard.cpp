@@ -69,7 +69,6 @@ TeleopTwistKeyboard::TeleopTwistKeyboard():nh_("~")
     nh_.param("initial_angular", initial_angular_, initial_angular_);
     nh_.param("linear_step", linear_step_, linear_step_);
     nh_.param("angular_step", angular_step_, angular_step_);
-    nh_.param("is_forward_lock", is_forward_lock_, is_forward_lock_);
     
     key_bindings_.forward = readCharParam(nh_, "key_bindings/forward", key_bindings_.forward);
     key_bindings_.backward = readCharParam(nh_, "key_bindings/backward", key_bindings_.backward);

@@ -3,12 +3,9 @@
 # 发布速度消息的主题名称
 topic: "/cmd_vel"
 
-# 是否启用方向锁定功能
-is_forward_lock: false
-
 # 初始线速度和角速度
-initial_linear_x: 0.0
-initial_linear_y: 0.0
+initial_linear_x: 5.0
+initial_linear_y: 5.0
 initial_angular_z: 0.0
 
 # 线速度和角速度的初始值和步长
@@ -32,8 +29,8 @@ key_bindings:
   decrease_linear: 'j'
   increase_angular: 'i'
   decrease_angular: 'k'
-  left_rotate: 'f'
-  right_rotate: 'g'
+  left_rotate: 'v'
+  right_rotate: 'b'
 
 # 发布速度消息的频率（Hz）
 publish_rate: 10
