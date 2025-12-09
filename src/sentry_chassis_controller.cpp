@@ -122,15 +122,15 @@ namespace sentry_chassis_controller {
 
     void SentryChassisController::setSpeedPivot(const ros::Duration &period)
     {
-        front_left_wheel_joint_.setCommand(pid_fl_wheel_.computeCommand(wheel_cmd_[0]/*6*/ - front_left_wheel_joint_.getVelocity(), period));
-        front_right_wheel_joint_.setCommand(pid_fr_wheel_.computeCommand(wheel_cmd_[1] - front_right_wheel_joint_.getVelocity(), period));
-        back_left_wheel_joint_.setCommand(pid_bl_wheel_.computeCommand(wheel_cmd_[2] - back_left_wheel_joint_.getVelocity(), period));
-        back_right_wheel_joint_.setCommand(pid_br_wheel_.computeCommand(wheel_cmd_[3] - back_right_wheel_joint_.getVelocity(), period));
-
         front_left_pivot_joint_.setCommand(pid_fl_pivot_.computeCommand(pivot_cmd_[0] - front_left_pivot_joint_.getPosition(), period));
         front_right_pivot_joint_.setCommand(pid_fr_pivot_.computeCommand(pivot_cmd_[1] - front_right_pivot_joint_.getPosition(), period));
         back_left_pivot_joint_.setCommand(pid_bl_pivot_.computeCommand(pivot_cmd_[2] - back_left_pivot_joint_.getPosition(), period));
         back_right_pivot_joint_.setCommand(pid_br_pivot_.computeCommand(pivot_cmd_[3] - back_right_pivot_joint_.getPosition(), period));
+
+        front_left_wheel_joint_.setCommand(pid_fl_wheel_.computeCommand(wheel_cmd_[0]/*6*/ - front_left_wheel_joint_.getVelocity(), period));
+        front_right_wheel_joint_.setCommand(pid_fr_wheel_.computeCommand(wheel_cmd_[1] - front_right_wheel_joint_.getVelocity(), period));
+        back_left_wheel_joint_.setCommand(pid_bl_wheel_.computeCommand(wheel_cmd_[2] - back_left_wheel_joint_.getVelocity(), period));
+        back_right_wheel_joint_.setCommand(pid_br_wheel_.computeCommand(wheel_cmd_[3] - back_right_wheel_joint_.getVelocity(), period));
     }
 
     void SentryChassisController::reset_pid()
@@ -230,34 +230,31 @@ namespace sentry_chassis_controller {
 
     void SentryChassisController::calculatePivot(const double direction_src, const double angular)//传入的是方向角、角速度
     {
-        double direction = direction_src;//获取原始角度
-        //限制角度
-        if (abs(direction) > max_direction_)
-        {
-            direction = max_direction_ * (abs(direction) / direction);
-        }
-
+        double direction_limit = direction_src;
         // 根据转向模式调整轮子转向角度
         switch (turn_mode_)
         {
             case ForwardTurn://前轮转向
-                pivot_cmd_[0] = direction;//左前
-                pivot_cmd_[1] = direction;//右前
+                if (abs(direction_limit) > M_PI_2)
+                {
+                    direction_limit = max_direction_ * (direction_limit / abs(direction_limit));
+                }
+                pivot_cmd_[0] = direction_limit;//左前
+                pivot_cmd_[1] = direction_limit;//右前
                 pivot_cmd_[2] = 0;//左后
                 pivot_cmd_[3] = 0;//右后
                 break;
             case BackwardTurn://后轮转向
                 pivot_cmd_[0] = 0;//左前
                 pivot_cmd_[1] = 0;//右前
-                pivot_cmd_[2] = direction;//左后
-                pivot_cmd_[3] = direction;//右后
+                pivot_cmd_[2] = -direction_limit;//左后
+                pivot_cmd_[3] = -direction_limit;//右后
                 break;
             case AllTurn://全轮转向(默认)
                 for (int i = 0; i < 4; i++)
                 {
-                    pivot_cmd_[i] = direction;
-                }
-                
+                    pivot_cmd_[i] = direction_src;
+                }         
                 break;
             case NoneTurn://不转向
                 for (int i = 0; i < 4; i++)
@@ -345,8 +342,9 @@ namespace sentry_chassis_controller {
         {
             for (int i = 0; i < 4; i++)
             {
-                wheel_cmd_[i] = speed_to_rotate_ * angular;
+                wheel_cmd_[i] = -(angular * speed_to_rotate_);
             }
+            //轮子角度互交
             pivot_cmd_[0] = -M_PI_2 * 0.5;
             pivot_cmd_[1] = -M_PI * 0.75;
             pivot_cmd_[2] = M_PI_2 * 0.5;
@@ -356,15 +354,26 @@ namespace sentry_chassis_controller {
         }
 
         //计算方向和速度
-        double direction = atan2(vy, vx);//方向角，不是角速度
-        double speed = sqrt(vx * vx + vy * vy);
-        speed = std::min(speed, max_speed_); // 限制最大速度
-        speed = speed * ((direction / direction) < 1e-4 ? 1 : (abs(direction) / direction));//速度矢量化
-
-        //使用新的函数处理差速转向
+        double direction = atan2(vy, vx);
+        double speed = sqrt(vx * vx + vy * vy) * (vx >= 0 ? 1:-1);
+        if (turn_mode_ == AllTurn)
+        {
+            //全向模式单独处理
+            direction = atan2(vy, vx);
+            speed = sqrt(vx * vx + vy * vy);
+            calculatePivot(direction, angular);
+            calculateWheel(direction, speed);
+            printExpectedSpeed();
+            return;
+        }
+        
+        if (abs(vy) < 1e-6)
+        {
+            direction = 0;
+        }
+        
+        calculatePivot(direction, angular);
         calculateWheel(direction, speed);
-        calculatePivot(direction, angular);//传入的是方向角和角速度
-
         printExpectedSpeed();
         return;
     }
@@ -555,6 +564,8 @@ namespace sentry_chassis_controller {
         ROS_INFO("Sentry Chassis Controller initialized");
         ROS_INFO("Wheel track: %.3f m, Wheel base: %.3f m", wheel_track_, wheel_base_);
         ROS_INFO("Wheel radius: %.3f m", rob_state_.wheel_radius);
+        ROS_INFO("Drive mode:%d   Turn mode:%d", drive_mode_, turn_mode_);
+        ROS_INFO("max direction:%f", max_direction_);
         return true;
     }
 

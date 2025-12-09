@@ -36,7 +36,7 @@ sentry_chassis_controller:
   robot_base_frame_id: "base_link"
 
   # 驱动和转向模式
-  drive_mode: 1   # 可选值: Forward=0, Backward=1, All=2 前驱 后驱 全驱
+  drive_mode: 0   # 可选值: Forward=0, Backward=1, All=2 前驱 后驱 全驱
   turn_mode: 0    # 可选值: Forward=0, Backward=1, All=2, None=3 前转 后转 全转 履带(不转)
   
   # 小陀螺系数控制

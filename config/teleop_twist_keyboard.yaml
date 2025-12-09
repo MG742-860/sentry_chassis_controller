@@ -4,12 +4,12 @@
 topic: "/cmd_vel"
 
 # 初始线速度和角速度
-initial_linear_x: 5.0
-initial_linear_y: 5.0
+initial_linear_x: 0.0
+initial_linear_y: 0.0
 initial_angular_z: 0.0
 
 # 线速度和角速度的初始值和步长
-initial_linear: 0.1
+initial_linear: 5.0
 initial_angular: 0.01
 linear_step: 0.1
 angular_step: 0.01
@@ -29,8 +29,8 @@ key_bindings:
   decrease_linear: 'j'
   increase_angular: 'i'
   decrease_angular: 'k'
-  left_rotate: 'v'
-  right_rotate: 'b'
+  left_rotate: 'f'
+  right_rotate: 'g'
 
 # 发布速度消息的频率（Hz）
 publish_rate: 10

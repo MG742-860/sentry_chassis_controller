@@ -97,8 +97,16 @@ log：
 **全向一定是全驱**。
 测试中效果并不理想。
 
-hash：
+hash：e8aa18dc2506954954251eeddd1c1f094811ee21
 
 branch：(HEAD -> master, origin/master)
 
 date：2025.12.8 21：31
+
+##### 第十次修改
+log：
+修改了键盘发布逻辑，和py版的和差不多一样，简化控制器逻辑，将计算转移到底盘控制器中。
+修正了底盘控制器计算函数(calculateWheelCommands())计算逻辑。
+修复运动模式：
+* 全驱+全向
+* 前驱+前转

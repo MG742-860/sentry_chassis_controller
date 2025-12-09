@@ -34,8 +34,8 @@ TeleopTwistKeyboard::TeleopTwistKeyboard():nh_("~")
     twist_msg_.linear.x = 0.0;
     twist_msg_.linear.y = 0.0;
     twist_msg_.angular.z = 0.0;//只用到这三个分量
-    initial_linear_ = 0.1;
-    initial_angular_ = 0.01;
+    initial_linear_ = 2.0;
+    initial_angular_ = 0.05;
     linear_step_ = 0.1;
     angular_step_ = 0.01;
     pub_rate_ = 10; // 10 Hz
@@ -187,12 +187,12 @@ void TeleopTwistKeyboard::run()
             else if(key == key_bindings_.left)
             {
                 twist_msg_.linear.y = initial_linear_;
-                 if (!is_forward_lock_) twist_msg_.angular.z = initial_angular_;
+                twist_msg_.angular.z = initial_angular_;
             }
             else if(key == key_bindings_.right)
             {
                 twist_msg_.linear.y = -initial_linear_;
-                 if (!is_forward_lock_) twist_msg_.angular.z = -initial_angular_;
+                twist_msg_.angular.z = -initial_angular_;
             }
             else if(key == key_bindings_.stop)
             {
@@ -242,11 +242,11 @@ void TeleopTwistKeyboard::run()
             }
             else if(key == key_bindings_.left_rotate)
             {
-                twist_msg_.angular.z = M_PI/4;// M_Pi/4
+                twist_msg_.angular.z = initial_angular_;
             }
             else if(key == key_bindings_.right_rotate)
             {
-                twist_msg_.angular.z = -M_PI/4;// -M_Pi/4
+                twist_msg_.angular.z = -initial_angular_;
             }
             else if(key == 3) // CTRL+C
             {
