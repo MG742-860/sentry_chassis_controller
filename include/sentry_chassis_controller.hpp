@@ -115,6 +115,7 @@ namespace sentry_chassis_controller{
 
             //其他参数
             int speed_to_rotate_;
+            double speed_diff_m_;
             bool print_expected_speed_, print_expected_pivot_, odom_show_;
             double max_speed_, max_angular_, max_direction_;
             bool coordinate_mode_;  // false: 底盘坐标系，true: 全局坐标系

@@ -22,7 +22,7 @@ sentry_chassis_controller:
   # 速度、角速度、转角最大值限制
   max_speed: 10
   max_angular: 10
-  max_direction: 45 # 单位：度
+  max_direction: 35 # 单位：度
 
   # 小车无输入信号停止阈值
   stop_time: 0.5
@@ -36,11 +36,13 @@ sentry_chassis_controller:
   robot_base_frame_id: "base_link"
 
   # 驱动和转向模式
-  drive_mode: 0   # 可选值: Forward=0, Backward=1, All=2 前驱 后驱 全驱
+  drive_mode: 2   # 可选值: Forward=0, Backward=1, All=2 前驱 后驱 全驱
   turn_mode: 0    # 可选值: Forward=0, Backward=1, All=2, None=3 前转 后转 全转 履带(不转)
   
   # 小陀螺系数控制
   speed_to_rotate: 100
+  # 履带模式差速系数
+  speed_diff_m: 100
 
   # 信息打印
   print_expected_speed: true

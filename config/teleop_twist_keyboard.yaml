@@ -9,8 +9,8 @@ initial_linear_y: 0.0
 initial_angular_z: 0.0
 
 # 线速度和角速度的初始值和步长
-initial_linear: 5.0
-initial_angular: 0.01
+initial_linear: 7.0
+initial_angular: 0.10
 linear_step: 0.1
 angular_step: 0.01
 

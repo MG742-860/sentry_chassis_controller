@@ -30,6 +30,8 @@ namespace sentry_chassis_controller {
         max_direction_ = max_direction_c * M_PI / 180.0; // 转化为弧度
         //小陀螺系数
         speed_to_rotate_ = controller_nh.param("speed_to_rotate", 100.0);
+        //履带模式差速系数
+        speed_diff_m_ = controller_nh.param("speed_diff_m",10);
         //没有指令时停止小车阈值
         stop_time_ = controller_nh.param("stop_time", 0.5);
         //是否打印相关信息
@@ -207,22 +209,22 @@ namespace sentry_chassis_controller {
         switch (drive_mode_)
         {
             case ForwardDrive://前驱
-                wheel_cmd_[0] = speed;//左前
-                wheel_cmd_[1] = speed;//右前
+                wheel_cmd_[0] += speed;//左前
+                wheel_cmd_[1] += speed;//右前
                 wheel_cmd_[2] = 0;//左后
                 wheel_cmd_[3] = 0;//右后
                 break;
             case BackwardDrive://后驱
                 wheel_cmd_[0] = 0;//左前
                 wheel_cmd_[1] = 0;//右前
-                wheel_cmd_[2] = speed;//左后
-                wheel_cmd_[3] = speed;//右后
+                wheel_cmd_[2] += speed;//左后
+                wheel_cmd_[3] += speed;//右后
                 break;
             case AllDrive://全驱(默认)
             default:
                 for (int i = 0; i < 4; i++)
                 {
-                    wheel_cmd_[i] = speed;
+                    wheel_cmd_[i] += (turn_mode_ == AllTurn)?abs(speed):speed;
                 }
                 break;
         }
@@ -235,9 +237,10 @@ namespace sentry_chassis_controller {
         switch (turn_mode_)
         {
             case ForwardTurn://前轮转向
-                if (abs(direction_limit) > M_PI_2)
+                if (abs(direction_limit) >= M_PI_2 - 1e-6)
                 {
-                    direction_limit = max_direction_ * (direction_limit / abs(direction_limit));
+                    direction_limit = M_PI*(direction_limit/abs(direction_limit)) - direction_limit;
+                    direction_limit = abs(max_direction_)<abs(direction_limit)?(max_direction_)*(direction_limit/abs(direction_limit)):direction_limit;
                 }
                 pivot_cmd_[0] = direction_limit;//左前
                 pivot_cmd_[1] = direction_limit;//右前
@@ -245,6 +248,11 @@ namespace sentry_chassis_controller {
                 pivot_cmd_[3] = 0;//右后
                 break;
             case BackwardTurn://后轮转向
+                if (abs(direction_limit) >= M_PI_2 - 1e-6)
+                {
+                    direction_limit = M_PI*(direction_limit/abs(direction_limit)) - direction_limit;
+                    direction_limit = abs(max_direction_)<abs(direction_limit)?(max_direction_)*(direction_limit/abs(direction_limit)):direction_limit;
+                }
                 pivot_cmd_[0] = 0;//左前
                 pivot_cmd_[1] = 0;//右前
                 pivot_cmd_[2] = -direction_limit;//左后
@@ -276,11 +284,8 @@ namespace sentry_chassis_controller {
         {
             return;  // 没有角速度，不需要差速
         }
-        
-        // 计算差速调整量
-        // 差速公式：omega = (v_right - v_left) / wheel_track
-        // 所以：v_right - v_left = omega * wheel_track
-        double speed_diff = angular * wheel_track_ / 2.0;
+
+        double speed_diff = angular * (wheel_track_ / 2.0) * speed_diff_m_;
         
         // 根据驱动模式应用差速
         switch (drive_mode_) 
@@ -355,23 +360,13 @@ namespace sentry_chassis_controller {
 
         //计算方向和速度
         double direction = atan2(vy, vx);
-        double speed = sqrt(vx * vx + vy * vy) * (vx >= 0 ? 1:-1);
-        if (turn_mode_ == AllTurn)
+        double speed = sqrt(vx * vx + vy * vy) * (abs(direction) > M_PI_2 ? -1:1);
+        //先将数据置零
+        for (int i = 0; i < 4; i++)
         {
-            //全向模式单独处理
-            direction = atan2(vy, vx);
-            speed = sqrt(vx * vx + vy * vy);
-            calculatePivot(direction, angular);
-            calculateWheel(direction, speed);
-            printExpectedSpeed();
-            return;
+            pivot_cmd_[i] = 0;
+            wheel_cmd_[i] = 0;
         }
-        
-        if (abs(vy) < 1e-6)
-        {
-            direction = 0;
-        }
-        
         calculatePivot(direction, angular);
         calculateWheel(direction, speed);
         printExpectedSpeed();
