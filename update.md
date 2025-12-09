@@ -115,7 +115,7 @@ log：
 * (前驱 后驱 全驱)+前转
 * (前驱 后驱 全驱)+后转
 
-hash：
+hash：200008ac3e5b3ec35d41716629848ecb9780dfc7
 
 branch：(HEAD -> master, origin/master)
 
