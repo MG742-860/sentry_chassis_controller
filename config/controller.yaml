@@ -27,8 +27,15 @@ sentry_chassis_controller:
   # 小车无输入信号停止阈值
   stop_time: 0.5
 
-  # 底盘是否锁住
-  # is_forward_lock: true
+  # 功率限制参数
+  enable_power_limit: false
+  enable_power_limit: true
+  max_power: 120.0
+  buffer_capacity: 60.0
+  buffer_threshold: 20.0
+  bus_voltage: 24.0
+  torque_constant: 0.05
+  static_friction_current: 0.5
 
   # 坐标系配置
   coordinate_mode: false  # false: 底盘坐标系，true: 全局坐标系

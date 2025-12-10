@@ -181,7 +181,7 @@ namespace sentry_chassis_controller {
     void SentryChassisController::CmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
     {
         gotten_msg = *msg;
-        last_angular_ = (gotten_msg.angular.z && (abs(gotten_msg.angular.z) - abs(M_PI/4)) > 1e-2)? gotten_msg.angular.z : last_angular_;
+        last_angular_ = (gotten_msg.angular.z && (fabs(gotten_msg.angular.z) - fabs(M_PI/4)) > 1e-2)? gotten_msg.angular.z : last_angular_;
         received_msg_ = true;
         last_time_ = ros::Time::now();
     }
@@ -224,7 +224,7 @@ namespace sentry_chassis_controller {
             default:
                 for (int i = 0; i < 4; i++)
                 {
-                    wheel_cmd_[i] += (turn_mode_ == AllTurn)?abs(speed):speed;
+                    wheel_cmd_[i] += (turn_mode_ == AllTurn)?fabs(speed):speed;
                 }
                 break;
         }
@@ -237,10 +237,10 @@ namespace sentry_chassis_controller {
         switch (turn_mode_)
         {
             case ForwardTurn://前轮转向
-                if (abs(direction_limit) >= M_PI_2 - 1e-6)
+                if (fabs(direction_limit) >= M_PI_2 - 1e-6)
                 {
-                    direction_limit = M_PI*(direction_limit/abs(direction_limit)) - direction_limit;
-                    direction_limit = abs(max_direction_)<abs(direction_limit)?(max_direction_)*(direction_limit/abs(direction_limit)):direction_limit;
+                    direction_limit = M_PI*(direction_limit/fabs(direction_limit)) - direction_limit;
+                    direction_limit = fabs(max_direction_)<fabs(direction_limit)?(max_direction_)*(direction_limit/fabs(direction_limit)):direction_limit;
                 }
                 pivot_cmd_[0] = direction_limit;//左前
                 pivot_cmd_[1] = direction_limit;//右前
@@ -248,10 +248,10 @@ namespace sentry_chassis_controller {
                 pivot_cmd_[3] = 0;//右后
                 break;
             case BackwardTurn://后轮转向
-                if (abs(direction_limit) >= M_PI_2 - 1e-6)
+                if (fabs(direction_limit) >= M_PI_2 - 1e-6)
                 {
-                    direction_limit = M_PI*(direction_limit/abs(direction_limit)) - direction_limit;
-                    direction_limit = abs(max_direction_)<abs(direction_limit)?(max_direction_)*(direction_limit/abs(direction_limit)):direction_limit;
+                    direction_limit = M_PI*(direction_limit/fabs(direction_limit)) - direction_limit;
+                    direction_limit = fabs(max_direction_)<fabs(direction_limit)?(max_direction_)*(direction_limit/fabs(direction_limit)):direction_limit;
                 }
                 pivot_cmd_[0] = 0;//左前
                 pivot_cmd_[1] = 0;//右前
@@ -329,21 +329,21 @@ namespace sentry_chassis_controller {
             return;
         }
         //如果有消息，判断是否超过设定的最大值
-        if (abs(vx) > abs(max_speed_))
+        if (fabs(vx) > fabs(max_speed_))
         {
-            vx = max_speed_ * (abs(vx) / vx);
+            vx = max_speed_ * (fabs(vx) / vx);
         }
-        if (abs(vy) > abs(max_speed_))
+        if (fabs(vy) > fabs(max_speed_))
         {
-            vy = max_speed_ * (abs(vy) / vy);
+            vy = max_speed_ * (fabs(vy) / vy);
         }
-        if (abs(angular) > abs(max_angular_))
+        if (fabs(angular) > fabs(max_angular_))
         {
-            angular = max_angular_ * (abs(angular) / angular);
+            angular = max_angular_ * (fabs(angular) / angular);
         }       
 
         //如果有角速度但是没有线速度，就原地转圈
-        if ((abs(angular) > 1e-6) && (sqrt(vx*vx + vy*vy) < 1e-6))
+        if ((fabs(angular) > 1e-6) && (sqrt(vx*vx + vy*vy) < 1e-6))
         {
             for (int i = 0; i < 4; i++)
             {
@@ -360,7 +360,7 @@ namespace sentry_chassis_controller {
 
         //计算方向和速度
         double direction = atan2(vy, vx);
-        double speed = sqrt(vx * vx + vy * vy) * (abs(direction) > M_PI_2 ? -1:1);
+        double speed = sqrt(vx * vx + vy * vy) * (fabs(direction) > M_PI_2 ? -1:1);
         //先将数据置零
         for (int i = 0; i < 4; i++)
         {
@@ -488,19 +488,124 @@ namespace sentry_chassis_controller {
         }     
     }
 
+    void SentryChassisController::initPowerManagement(ros::NodeHandle & controller_nh)
+    {
+        //读取参数
+        power_mgt_.is_enable_ = controller_nh.param("enable_power_limit", false);
+        power_mgt_.is_print_ = controller_nh.param("enable_power_print", true);
+        power_mgt_.max_power_ = controller_nh.param("max_power", 120.0);
+        power_mgt_.buffer_capacity_ = controller_nh.param("buffer_capacity", 60.0);
+        power_mgt_.buffer_threshold_ = controller_nh.param("buffer_threshold", 20.0);
+        power_mgt_.voltage_ = controller_nh.param("bus_voltage", 24.0);
+        power_mgt_.torque_constant = controller_nh.param("torque_constant", 0.05);
+        power_mgt_.static_friction_current = controller_nh.param("static_friction_current", 0.5);
+        //初始化参数
+        power_mgt_.current_power_ = 0.0;
+        power_mgt_.power_buffer_ = power_mgt_.buffer_capacity_;
+        power_mgt_.last_power_update_ = ros::Time::now();
+
+        if(!power_mgt_.is_enable_) return;
+
+        ROS_INFO("Power management initialized: max_power:%.1f W, buffer:%.1f J, bus voltage:%.1f V, Torque:%.3f Nm/A", 
+            power_mgt_.max_power_, power_mgt_.buffer_capacity_, power_mgt_.voltage_, power_mgt_.torque_constant);
+    }
+
+
+    void SentryChassisController::updatePowerConsumption()
+    {
+        if(!power_mgt_.is_enable_) return;
+        // 计算所有电机的总电流
+        double total_current = 0.0;
+        //现阶段只能获取到力矩，力矩与电流关系：力矩 = 电流 * 转矩常数
+        total_current += fabs(front_left_wheel_joint_.getEffort()) / power_mgt_.torque_constant;
+        total_current += fabs(front_right_wheel_joint_.getEffort()) / power_mgt_.torque_constant;
+        total_current += fabs(back_left_wheel_joint_.getEffort()) / power_mgt_.torque_constant;
+        total_current += fabs(back_right_wheel_joint_.getEffort()) / power_mgt_.torque_constant;
+        //加上静态摩擦电流
+        total_current += power_mgt_.static_friction_current * 4;
+        //计算总功率 P = U * I
+        power_mgt_.current_power_ = power_mgt_.voltage_ * total_current;
+        //更新功率缓冲池
+        ros::Time current_time_p = ros::Time::now();
+        double dt = (current_time_p - power_mgt_.last_power_update_).toSec();
+        if (power_mgt_.current_power_ > power_mgt_.max_power_)
+        {
+            //超过额定功率，消耗缓冲池
+            double exceed_power = power_mgt_.current_power_ - power_mgt_.max_power_;
+            power_mgt_.power_buffer_ -=exceed_power * dt;
+        }
+        else
+        {
+            //没有超过，恢复缓冲池
+            double remain_power = power_mgt_.max_power_ - power_mgt_.current_power_;
+            power_mgt_.power_buffer_ = std::min(power_mgt_.buffer_capacity_, power_mgt_.power_buffer_ + remain_power * dt);
+        }
+        //限制缓冲池范围，防止减小到负数
+        power_mgt_.power_buffer_ = std::max(0.0, power_mgt_.power_buffer_);
+        //调试输出
+        static int power_debug_count = 0;
+        if (++power_debug_count % 100 == 0 && power_mgt_.is_print_) {
+            ROS_INFO("Power: %.1fW (I=%.1fA), Buffer: %.1fJ/%.1fJ", 
+                    power_mgt_.current_power_, total_current,
+                    power_mgt_.power_buffer_, power_mgt_.buffer_capacity_);
+            power_debug_count = 0;
+        }
+    }
+
+    double SentryChassisController::calculatePowerLimitFactor()
+    {
+        if(!power_mgt_.is_enable_) return 1.0;
+        double factor = 1.0;
+        //缓冲池低于阈值，开始限速
+        if (power_mgt_.power_buffer_ < power_mgt_.buffer_threshold_)
+        {
+            factor = power_mgt_.power_buffer_ / power_mgt_.buffer_threshold_;
+            factor = std::max(0.3, factor);//最低降低到30%
+            //如果快耗尽，直接限制到30%
+            if(power_mgt_.power_buffer_ < power_mgt_.buffer_threshold_ * 0.3) factor = 0.3;
+        }
+        //如果完全耗尽，则进一步限制
+        if(power_mgt_.power_buffer_ <= 1e-6) factor = 0.2;
+        return factor;
+    }
+
+    void SentryChassisController::applyPowerLimiting()
+    {
+        if(!power_mgt_.is_enable_) return;
+        double limit_factor = calculatePowerLimitFactor();
+        if (limit_factor < 0.98)//显著限制时才应用
+        {
+            //等比例降低所有轮子速度
+            for (int i = 0; i < 4; i++)
+            {
+                wheel_cmd_[i] *= limit_factor;
+            }
+        }
+        static int warn_count = 0;
+        if (++warn_count % 50 == 0 && power_mgt_.is_print_) {
+            ROS_WARN("Power limiting enabled: factor=%.2f, buffer=%.1fJ/%.1fJ, power=%.1fW",
+                        limit_factor, power_mgt_.power_buffer_, power_mgt_.buffer_capacity_, power_mgt_.current_power_);
+            warn_count = 0;
+        }
+    }
+
     void SentryChassisController::printExpectedSpeed()
     {
-        if(print_expected_speed_) 
-        {    
-            ROS_INFO("Speed expected > FL Wheel: %f, FR Wheel: %f, BL Wheel: %f, BR Wheel: %f", wheel_cmd_[0], wheel_cmd_[1], wheel_cmd_[2], wheel_cmd_[3]);
-            ROS_INFO("Speed gotten   > FL Wheel: %f, FR Wheel: %f, BL Wheel: %f, BR Wheel: %f", front_left_wheel_joint_.getVelocity(), front_right_wheel_joint_.getVelocity(), back_left_wheel_joint_.getVelocity(), back_right_wheel_joint_.getVelocity());
-            ROS_INFO("Difference     > FL Wheel: %f, FR Wheel: %f, BL Wheel: %f, BR Wheel: %f", wheel_cmd_[0] - front_left_wheel_joint_.getVelocity(), wheel_cmd_[1] - front_right_wheel_joint_.getVelocity(), wheel_cmd_[2] - back_left_wheel_joint_.getVelocity(), wheel_cmd_[3] - back_right_wheel_joint_.getVelocity());
-        }
-        if(print_expected_pivot_) 
+        static ros::Time last_print_ = ros::Time::now();
+        if ((ros::Time::now() - last_print_).toSec() > 0.7)
         {
-            ROS_INFO("Pivot expected > FL: %f, FR: %f, BL: %f, BR: %f", pivot_cmd_[0], pivot_cmd_[1], pivot_cmd_[2], pivot_cmd_[3]);
-            ROS_INFO("Pivot gotten   > FL: %f, FR: %f, BL: %f, BR: %f", front_left_pivot_joint_.getPosition(), front_right_pivot_joint_.getPosition(), back_left_pivot_joint_.getPosition(), back_right_pivot_joint_.getPosition());
-            ROS_INFO("Difference     > FL: %f, FR: %f, BL: %f, BR: %f", pivot_cmd_[0] - front_left_pivot_joint_.getPosition(), pivot_cmd_[1] - front_right_pivot_joint_.getPosition(), pivot_cmd_[2] - back_left_pivot_joint_.getPosition(), pivot_cmd_[3] - back_right_pivot_joint_.getPosition());
+            if(print_expected_speed_) 
+            {    
+                ROS_INFO("Speed expected > FL Wheel: %f, FR Wheel: %f, BL Wheel: %f, BR Wheel: %f", wheel_cmd_[0], wheel_cmd_[1], wheel_cmd_[2], wheel_cmd_[3]);
+                ROS_INFO("Speed gotten   > FL Wheel: %f, FR Wheel: %f, BL Wheel: %f, BR Wheel: %f", front_left_wheel_joint_.getVelocity(), front_right_wheel_joint_.getVelocity(), back_left_wheel_joint_.getVelocity(), back_right_wheel_joint_.getVelocity());
+                ROS_INFO("Difference     > FL Wheel: %f, FR Wheel: %f, BL Wheel: %f, BR Wheel: %f", wheel_cmd_[0] - front_left_wheel_joint_.getVelocity(), wheel_cmd_[1] - front_right_wheel_joint_.getVelocity(), wheel_cmd_[2] - back_left_wheel_joint_.getVelocity(), wheel_cmd_[3] - back_right_wheel_joint_.getVelocity());
+            }
+            if(print_expected_pivot_) 
+            {
+                ROS_INFO("Pivot expected > FL: %f, FR: %f, BL: %f, BR: %f", pivot_cmd_[0], pivot_cmd_[1], pivot_cmd_[2], pivot_cmd_[3]);
+                ROS_INFO("Pivot gotten   > FL: %f, FR: %f, BL: %f, BR: %f", front_left_pivot_joint_.getPosition(), front_right_pivot_joint_.getPosition(), back_left_pivot_joint_.getPosition(), back_right_pivot_joint_.getPosition());
+                ROS_INFO("Difference     > FL: %f, FR: %f, BL: %f, BR: %f", pivot_cmd_[0] - front_left_pivot_joint_.getPosition(), pivot_cmd_[1] - front_right_pivot_joint_.getPosition(), pivot_cmd_[2] - back_left_pivot_joint_.getPosition(), pivot_cmd_[3] - back_right_pivot_joint_.getPosition());
+            }
         }
     }
 
@@ -515,6 +620,8 @@ namespace sentry_chassis_controller {
     {
         //获取参数
         get_parameters(controller_nh);
+        //初始化功率管理
+        initPowerManagement(controller_nh);
         //初始化关节
         get_joint(effort_joint_interface, root_nh, controller_nh);
         //获取PID参数
@@ -581,6 +688,11 @@ namespace sentry_chassis_controller {
         convertToRobotFrame(robot_vx, robot_vy, robot_angular);
         //计算轮子速度和转向角度
         calculateWheelCommands(robot_vx, robot_vy,robot_angular);
+        //更新功率计算
+        updatePowerConsumption();
+        //应用功率限制
+        applyPowerLimiting();
+        //设置关节(8个)
         setSpeedPivot(period);
         //发布里程计
         publishOdometry();

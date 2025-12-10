@@ -37,6 +37,20 @@ namespace sentry_chassis_controller{
         double wheel_radius; // 轮子半径 (m)
     };
     
+    struct PowerManagement {
+        double max_power_ = 0;           // 最大允许功率 (W)
+        double current_power_ = 0;       // 当前功率 (W)
+        double power_buffer_ = 0;        // 功率缓冲池 (J)
+        double buffer_capacity_ = 0;     // 缓冲池容量 (J)
+        double buffer_threshold_ = 0;    // 缓冲池告警阈值 (J)
+        double voltage_ = 0;             // 总线电压 (V)
+        double torque_constant;          // 电机转矩常数 (Nm/A)
+        double static_friction_current;  // 静态摩擦电流 (A)
+        bool is_enable_ = false;         // 是否启用功率限制   
+        bool is_print_ = true;           // 是否打印调试信息
+        ros::Time last_power_update_;    // 上一次更新时间
+    };
+
     class SentryChassisController : public controller_interface::Controller<hardware_interface::EffortJointInterface>{
         public:
             //默认构造函数和析构函数
@@ -67,6 +81,12 @@ namespace sentry_chassis_controller{
             void calculateOdometry(const ros::Duration& period);
             void publishOdometry();
             
+            //功率限制相关
+            void initPowerManagement(ros::NodeHandle &controller_nh);
+            void updatePowerConsumption();
+            double calculatePowerLimitFactor();
+            void applyPowerLimiting();
+
             //打印测试函数
             void printExpectedSpeed();
 
@@ -112,6 +132,9 @@ namespace sentry_chassis_controller{
             //驱动和转向模式
             DriveMode drive_mode_;
             TurnMode turn_mode_;
+
+            //功率参数
+            PowerManagement power_mgt_;
 
             //其他参数
             int speed_to_rotate_;

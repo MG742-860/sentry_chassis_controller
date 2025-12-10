@@ -120,3 +120,14 @@ hash：200008ac3e5b3ec35d41716629848ecb9780dfc7
 branch：(HEAD -> master, origin/master)
 
 date：2025.12.9 21：52
+
+##### 第十一次提交
+log：
+添加了功率限制功能，相关参数自行配置
+
+hash：
+
+branch：(HEAD -> master, origin/master)
+
+date：2025.12.10 13：51
+
