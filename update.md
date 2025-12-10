@@ -135,7 +135,7 @@ date：2025.12.10 13：51
 log：
 更改了功率限制计算模型
 
-hash：
+hash：d45e61d35301a67fdd939d3411cd9d0e9dcf9832
 
 branch：(HEAD -> master, origin/master)
 
