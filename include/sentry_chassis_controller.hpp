@@ -38,17 +38,19 @@ namespace sentry_chassis_controller{
     };
     
     struct PowerManagement {
-        double max_power_ = 0;           // 最大允许功率 (W)
-        double current_power_ = 0;       // 当前功率 (W)
-        double power_buffer_ = 0;        // 功率缓冲池 (J)
-        double buffer_capacity_ = 0;     // 缓冲池容量 (J)
-        double buffer_threshold_ = 0;    // 缓冲池告警阈值 (J)
-        double voltage_ = 0;             // 总线电压 (V)
-        double torque_constant;          // 电机转矩常数 (Nm/A)
-        double static_friction_current;  // 静态摩擦电流 (A)
-        bool is_enable_ = false;         // 是否启用功率限制   
-        bool is_print_ = true;           // 是否打印调试信息
-        ros::Time last_power_update_;    // 上一次更新时间
+        double k1_ = 0.001;              //力矩损耗系数
+        double k2_ = 0.0001;             //转速损耗系数
+        double max_power_ = 0;           //最大允许功率 (W)
+        double current_power_ = 0;       //当前功率 (W)
+        double torque_constant_ = 0.05;   //电机转矩常数 (Nm/A)
+        bool is_enable_ = false;         //是否启用功率限制
+        bool is_print_ = true;           //是否打印调试信息
+        ros::Time last_power_update_;    //上一次更新时间
+
+        //缓存计算
+        double total_torque_sq_ = 0.0;
+        double total_omega_sq_ = 0.0;
+        double total_torque_omega_ = 0.0;
     };
 
     class SentryChassisController : public controller_interface::Controller<hardware_interface::EffortJointInterface>{
@@ -83,8 +85,7 @@ namespace sentry_chassis_controller{
             
             //功率限制相关
             void initPowerManagement(ros::NodeHandle &controller_nh);
-            void updatePowerConsumption();
-            double calculatePowerLimitFactor();
+            double calculateTorqueLimitFactor();
             void applyPowerLimiting();
 
             //打印测试函数
@@ -117,7 +118,7 @@ namespace sentry_chassis_controller{
             double last_angular_;
             ros::Subscriber cmd_vel_sub_;
             bool received_msg_;
-            ros::Time last_time_;
+            ros::Time last_update_time_;
             double stop_time_;
 
             // /odom 相关

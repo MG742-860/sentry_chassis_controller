@@ -131,3 +131,12 @@ branch：(HEAD -> master, origin/master)
 
 date：2025.12.10 13：51
 
+##### 第十二次提交
+log：
+更改了功率限制计算模型
+
+hash：
+
+branch：(HEAD -> master, origin/master)
+
+date：2025.12.10 13：51

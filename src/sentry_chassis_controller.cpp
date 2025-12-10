@@ -183,7 +183,7 @@ namespace sentry_chassis_controller {
         gotten_msg = *msg;
         last_angular_ = (gotten_msg.angular.z && (fabs(gotten_msg.angular.z) - fabs(M_PI/4)) > 1e-2)? gotten_msg.angular.z : last_angular_;
         received_msg_ = true;
-        last_time_ = ros::Time::now();
+        last_update_time_ = ros::Time::now();
     }
 
     void SentryChassisController::convertToRobotFrame(double& robot_x, double& robot_y, double& robot_angular)
@@ -491,88 +491,79 @@ namespace sentry_chassis_controller {
     void SentryChassisController::initPowerManagement(ros::NodeHandle & controller_nh)
     {
         //读取参数
-        power_mgt_.is_enable_ = controller_nh.param("enable_power_limit", false);
+        power_mgt_.is_enable_ = controller_nh.param("enable_power_limit", true);
         power_mgt_.is_print_ = controller_nh.param("enable_power_print", true);
-        power_mgt_.max_power_ = controller_nh.param("max_power", 120.0);
-        power_mgt_.buffer_capacity_ = controller_nh.param("buffer_capacity", 60.0);
-        power_mgt_.buffer_threshold_ = controller_nh.param("buffer_threshold", 20.0);
-        power_mgt_.voltage_ = controller_nh.param("bus_voltage", 24.0);
-        power_mgt_.torque_constant = controller_nh.param("torque_constant", 0.05);
-        power_mgt_.static_friction_current = controller_nh.param("static_friction_current", 0.5);
+        power_mgt_.max_power_ = controller_nh.param("max_power", 360.0);
+        power_mgt_.k1_ = controller_nh.param("k1", 0.001);
+        power_mgt_.k2_ = controller_nh.param("k2", 0.0001);
+        power_mgt_.torque_constant_ = controller_nh.param("torque_constant", 0.05);
         //初始化参数
         power_mgt_.current_power_ = 0.0;
-        power_mgt_.power_buffer_ = power_mgt_.buffer_capacity_;
         power_mgt_.last_power_update_ = ros::Time::now();
 
         if(!power_mgt_.is_enable_) return;
+        if (power_mgt_.is_print_)
+        {
+            ROS_INFO("Power management initialized:");
+            ROS_INFO("  Max power: %.1f W", power_mgt_.max_power_);
+            ROS_INFO("  k1: %.6f, k2: %.6f", power_mgt_.k1_, power_mgt_.k2_);
+            ROS_INFO("  Torque constant: %.3f Nm/A", power_mgt_.torque_constant_);
+        }
+        
 
-        ROS_INFO("Power management initialized: max_power:%.1f W, buffer:%.1f J, bus voltage:%.1f V, Torque:%.3f Nm/A", 
-            power_mgt_.max_power_, power_mgt_.buffer_capacity_, power_mgt_.voltage_, power_mgt_.torque_constant);
     }
 
-
-    void SentryChassisController::updatePowerConsumption()
-    {
-        if(!power_mgt_.is_enable_) return;
-        // 计算所有电机的总电流
-        double total_current = 0.0;
-        //现阶段只能获取到力矩，力矩与电流关系：力矩 = 电流 * 转矩常数
-        total_current += fabs(front_left_wheel_joint_.getEffort()) / power_mgt_.torque_constant;
-        total_current += fabs(front_right_wheel_joint_.getEffort()) / power_mgt_.torque_constant;
-        total_current += fabs(back_left_wheel_joint_.getEffort()) / power_mgt_.torque_constant;
-        total_current += fabs(back_right_wheel_joint_.getEffort()) / power_mgt_.torque_constant;
-        //加上静态摩擦电流
-        total_current += power_mgt_.static_friction_current * 4;
-        //计算总功率 P = U * I
-        power_mgt_.current_power_ = power_mgt_.voltage_ * total_current;
-        //更新功率缓冲池
-        ros::Time current_time_p = ros::Time::now();
-        double dt = (current_time_p - power_mgt_.last_power_update_).toSec();
-        if (power_mgt_.current_power_ > power_mgt_.max_power_)
-        {
-            //超过额定功率，消耗缓冲池
-            double exceed_power = power_mgt_.current_power_ - power_mgt_.max_power_;
-            power_mgt_.power_buffer_ -=exceed_power * dt;
-        }
-        else
-        {
-            //没有超过，恢复缓冲池
-            double remain_power = power_mgt_.max_power_ - power_mgt_.current_power_;
-            power_mgt_.power_buffer_ = std::min(power_mgt_.buffer_capacity_, power_mgt_.power_buffer_ + remain_power * dt);
-        }
-        //限制缓冲池范围，防止减小到负数
-        power_mgt_.power_buffer_ = std::max(0.0, power_mgt_.power_buffer_);
-        //调试输出
-        static int power_debug_count = 0;
-        if (++power_debug_count % 100 == 0 && power_mgt_.is_print_) {
-            ROS_INFO("Power: %.1fW (I=%.1fA), Buffer: %.1fJ/%.1fJ", 
-                    power_mgt_.current_power_, total_current,
-                    power_mgt_.power_buffer_, power_mgt_.buffer_capacity_);
-            power_debug_count = 0;
-        }
-    }
-
-    double SentryChassisController::calculatePowerLimitFactor()
+    double SentryChassisController::calculateTorqueLimitFactor()
     {
         if(!power_mgt_.is_enable_) return 1.0;
-        double factor = 1.0;
-        //缓冲池低于阈值，开始限速
-        if (power_mgt_.power_buffer_ < power_mgt_.buffer_threshold_)
-        {
-            factor = power_mgt_.power_buffer_ / power_mgt_.buffer_threshold_;
-            factor = std::max(0.3, factor);//最低降低到30%
-            //如果快耗尽，直接限制到30%
-            if(power_mgt_.power_buffer_ < power_mgt_.buffer_threshold_ * 0.3) factor = 0.3;
+        //获取轮子转速
+        double fl_vel = front_left_wheel_joint_.getVelocity();
+        double fr_vel = front_right_wheel_joint_.getVelocity();
+        double bl_vel = back_left_wheel_joint_.getVelocity();
+        double br_vel = back_right_wheel_joint_.getVelocity();
+        //获取力矩    
+        double fl_tau = front_left_wheel_joint_.getEffort();
+        double fr_tau = front_right_wheel_joint_.getEffort();
+        double bl_tau = back_left_wheel_joint_.getEffort();
+        double br_tau = back_right_wheel_joint_.getEffort();
+        //计算总输出功率
+        double P_out = fabs(fl_tau * fl_vel) + fabs(fr_tau * fr_vel) + fabs(bl_tau * bl_vel) + fabs(br_tau * br_vel);
+        //计算损耗功率
+        double tau_sq_sum = fl_tau*fl_tau + fr_tau*fr_tau + bl_tau*bl_tau + br_tau*br_tau;
+        double omega_sq_sum = fl_vel*fl_vel + fr_vel*fr_vel + bl_vel*bl_vel + br_vel*br_vel;
+        double P_loss = power_mgt_.k1_ * tau_sq_sum + power_mgt_.k2_ * omega_sq_sum;
+        //输入总功率
+        double P_in = P_out + P_loss;
+        //更新当前功率
+        power_mgt_.current_power_ = P_in;
+        //没超过，不限制
+        if(P_in <= power_mgt_.max_power_) return 1.0;
+        //计算公式 3.3.4.4.2，计算缩放系数k
+        double a = power_mgt_.k1_ * tau_sq_sum;
+        double b = P_out;
+        double c = power_mgt_.k2_ * omega_sq_sum - power_mgt_.max_power_;
+        // 解一元二次方程，取合理正根
+        double discriminant = b*b - 4*a*c;
+        if(discriminant < 0) return 0.5; // 保护性限制
+        double k1 = (-b + sqrt(discriminant)) / (2*a);
+        double k2 = (-b - sqrt(discriminant)) / (2*a);
+        double k = (k1 > 0 && k1 <= 1.0) ? k1 : ((k2 > 0 && k2 <= 1.0) ? k2 : 0.5);
+
+        //调试输出
+        static ros::Time last_caculate_time;
+        if ((ros::Time::now() - last_caculate_time).toSec() > 1.0 && power_mgt_.is_print_) {
+            ROS_INFO("Power limit: P_in=%.1fW, P_max=%.1fW, k=%.3f", P_in, power_mgt_.max_power_, k);
+            last_caculate_time = ros::Time::now();
         }
-        //如果完全耗尽，则进一步限制
-        if(power_mgt_.power_buffer_ <= 1e-6) factor = 0.2;
-        return factor;
+
+        return std::max(0.3, std::min(1.0, k)); // 限制在0.3~1.0之间
     }
 
     void SentryChassisController::applyPowerLimiting()
     {
         if(!power_mgt_.is_enable_) return;
-        double limit_factor = calculatePowerLimitFactor();
+        static ros::Time last_apply_time;
+        double limit_factor = calculateTorqueLimitFactor();
         if (limit_factor < 0.98)//显著限制时才应用
         {
             //等比例降低所有轮子速度
@@ -580,19 +571,18 @@ namespace sentry_chassis_controller {
             {
                 wheel_cmd_[i] *= limit_factor;
             }
-        }
-        static int warn_count = 0;
-        if (++warn_count % 50 == 0 && power_mgt_.is_print_) {
-            ROS_WARN("Power limiting enabled: factor=%.2f, buffer=%.1fJ/%.1fJ, power=%.1fW",
-                        limit_factor, power_mgt_.power_buffer_, power_mgt_.buffer_capacity_, power_mgt_.current_power_);
-            warn_count = 0;
+            if ((ros::Time::now() - last_apply_time).toSec() > 1.0 && power_mgt_.is_print_) 
+            {
+                ROS_WARN("Power limiting enabled: factor=%.2f, power=%.1fW", limit_factor, power_mgt_.current_power_);
+                last_apply_time = ros::Time::now();
+            }
         }
     }
 
     void SentryChassisController::printExpectedSpeed()
     {
         static ros::Time last_print_ = ros::Time::now();
-        if ((ros::Time::now() - last_print_).toSec() > 0.7)
+        if ((ros::Time::now() - last_print_).toSec() > 1.0)
         {
             if(print_expected_speed_) 
             {    
@@ -612,9 +602,21 @@ namespace sentry_chassis_controller {
     void SentryChassisController::starting(const ros::Time& time)
     {
         ROS_INFO("Sentry Chassis Controller started");
+        reset_pid();
+        last_update_time_ = time;
     }
 
-    void SentryChassisController::stopping(const ros::Time& time){}
+    void SentryChassisController::stopping(const ros::Time& time){
+        // 停止时发送零力矩
+        front_left_pivot_joint_.setCommand(0.0);
+        front_right_pivot_joint_.setCommand(0.0);
+        back_left_pivot_joint_.setCommand(0.0);
+        back_right_pivot_joint_.setCommand(0.0);
+        front_left_wheel_joint_.setCommand(0.0);
+        front_right_wheel_joint_.setCommand(0.0);
+        back_left_wheel_joint_.setCommand(0.0);
+        back_right_wheel_joint_.setCommand(0.0);
+    }
 
     bool SentryChassisController::init(hardware_interface::EffortJointInterface *effort_joint_interface, ros::NodeHandle &root_nh, ros::NodeHandle &controller_nh)
     {
@@ -630,6 +632,8 @@ namespace sentry_chassis_controller {
         reset_pid();
         //初始化PID控制器
         init_pid_parameters(controller_nh);
+        //初始化功率管理
+        initPowerManagement(controller_nh);
         //初始化 twist消息
         gotten_msg.linear.x = 0;
         gotten_msg.linear.y = 0;
@@ -638,7 +642,7 @@ namespace sentry_chassis_controller {
         //初始化订阅者
         cmd_vel_sub_ = nh_.subscribe<geometry_msgs::Twist>("cmd_vel", 1, &SentryChassisController::CmdVelCallback, this);
         last_angular_ = 0.0;
-        last_time_ = ros::Time::now();
+        last_update_time_ = ros::Time::now();
         //初始化关节状态发布者
         joint_state_pub_ = nh_.advertise<sensor_msgs::JointState>("controller/joint_states", 10);
         joint_names_ = {"left_front_pivot_joint", "right_front_pivot_joint", "left_back_pivot_joint", "right_back_pivot_joint",
@@ -674,9 +678,9 @@ namespace sentry_chassis_controller {
     void SentryChassisController::update(const ros::Time &time, const ros::Duration &period)
     {
         //如果时间阈值内键盘没有输入正确的指令，就停止小车
-        if ((time - last_time_).toSec() > stop_time_)
+        if ((time - last_update_time_).toSec() > stop_time_)
         {
-            received_msg_ = false, last_time_ = time;
+            received_msg_ = false, last_update_time_ = time;
         }
         //先计算里程计，确保用到的robot_state_.theta是最新的
         calculateOdometry(period);
@@ -688,8 +692,6 @@ namespace sentry_chassis_controller {
         convertToRobotFrame(robot_vx, robot_vy, robot_angular);
         //计算轮子速度和转向角度
         calculateWheelCommands(robot_vx, robot_vy,robot_angular);
-        //更新功率计算
-        updatePowerConsumption();
         //应用功率限制
         applyPowerLimiting();
         //设置关节(8个)

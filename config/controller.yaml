@@ -28,12 +28,11 @@ sentry_chassis_controller:
   stop_time: 0.5
 
   # 功率限制参数
-  enable_power_limit: false
   enable_power_limit: true
-  max_power: 120.0
-  buffer_capacity: 60.0
-  buffer_threshold: 20.0
-  bus_voltage: 24.0
+  enable_power_print: true
+  max_power: 100.0
+  k1: 0.001
+  k2: 0.0001
   torque_constant: 0.05
   static_friction_current: 0.5
 
@@ -52,7 +51,7 @@ sentry_chassis_controller:
   speed_diff_m: 100
 
   # 信息打印
-  print_expected_speed: true
+  print_expected_speed: false
   print_expected_pivot: false
   print_odom: false
   
