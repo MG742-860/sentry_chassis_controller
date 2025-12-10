@@ -125,7 +125,7 @@ date：2025.12.9 21：52
 log：
 添加了功率限制功能，相关参数自行配置
 
-hash：
+hash：d49a41f37c8fe008eabc82de4d004d98b2f1f4e4
 
 branch：(HEAD -> master, origin/master)
 
