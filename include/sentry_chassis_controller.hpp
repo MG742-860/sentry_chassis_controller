@@ -12,6 +12,8 @@
 #include <sensor_msgs/JointState.h>
 #include <cmath>
 #include <memory>
+#include <dynamic_reconfigure/server.h>
+#include "sentry_chassis_controller/SentryChassisConfig.h"
 namespace sentry_chassis_controller{
 
     enum DriveMode{
@@ -66,6 +68,7 @@ namespace sentry_chassis_controller{
             void init_pid_parameters(ros::NodeHandle &controller_nh);
             void setSpeedPivot(const ros::Duration &period);
             void reset_pid();
+            void dynamicReconfigureCallback(sentry_chassis_controller::SentryChassisConfig &config, uint32_t level);
 
             //发布关节状态
             void publishJointStates();
@@ -111,6 +114,8 @@ namespace sentry_chassis_controller{
             control_toolbox::Pid pid_fl_pivot_, pid_fr_pivot_, pid_bl_pivot_, pid_br_pivot_;
             control_toolbox::Pid pid_fl_wheel_, pid_fr_wheel_, pid_bl_wheel_, pid_br_wheel_;
             control_toolbox::Pid::Gains gains_pivot_, gains_wheel_;
+            std::shared_ptr<dynamic_reconfigure::Server<sentry_chassis_controller::SentryChassisConfig>> dyn_reconf_server_;
+            dynamic_reconfigure::Server<sentry_chassis_controller::SentryChassisConfig>::CallbackType dyn_reconf_callback_;
 
             // /cmd_vel 相关
             ros::NodeHandle nh_;

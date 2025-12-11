@@ -148,6 +148,49 @@ namespace sentry_chassis_controller {
         pid_br_wheel_.reset();
     }
 
+    void SentryChassisController::dynamicReconfigureCallback(sentry_chassis_controller::SentryChassisConfig &config, uint32_t level)
+    {
+        ROS_INFO("动态参数更新 (level: %d)", level);
+        
+        // 更新转向关节PID参数
+        gains_pivot_.p_gain_ = config.pivot_p_gain;
+        gains_pivot_.i_gain_ = config.pivot_i_gain;
+        gains_pivot_.d_gain_ = config.pivot_d_gain;
+        gains_pivot_.i_max_ = config.pivot_i_max;
+        gains_pivot_.i_min_ = config.pivot_i_min;
+        
+        // 更新驱动轮PID参数
+        gains_wheel_.p_gain_ = config.wheel_p_gain;
+        gains_wheel_.i_gain_ = config.wheel_i_gain;
+        gains_wheel_.d_gain_ = config.wheel_d_gain;
+        gains_wheel_.i_max_ = config.wheel_i_max;
+        gains_wheel_.i_min_ = config.wheel_i_min;
+        
+        // 更新运动限制参数
+        max_speed_ = config.max_speed;
+        max_angular_ = config.max_angular;
+        max_direction_ = config.max_direction * M_PI / 180.0;  // 度转弧度
+        stop_time_ = config.stop_time;
+        
+        // 更新功率参数
+        power_mgt_.max_power_ = config.max_power;
+        power_mgt_.is_enable_ = config.enable_power_limit;
+        
+        // 更新调试选项
+        print_expected_speed_ = config.print_expected_speed;
+        print_expected_pivot_ = config.print_expected_pivot;
+        odom_show_ = config.print_odom;
+        
+        // 重新初始化PID控制器
+        init_pid_parameters(nh_);
+        
+        ROS_INFO("PID参数已更新:");
+        ROS_INFO("  转向关节 - P:%.2f, I:%.2f, D:%.2f", 
+                 gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_);
+        ROS_INFO("  驱动轮 - P:%.2f, I:%.2f, D:%.2f", 
+                 gains_wheel_.p_gain_, gains_wheel_.i_gain_, gains_wheel_.d_gain_);
+    }
+
     void SentryChassisController::publishJointStates(){
         // 更新关节状态
         ros::Time time = ros::Time::now();
@@ -634,6 +677,12 @@ namespace sentry_chassis_controller {
         init_pid_parameters(controller_nh);
         //初始化功率管理
         initPowerManagement(controller_nh);
+
+        dyn_reconf_server_ = std::make_shared<dynamic_reconfigure::Server<sentry_chassis_controller::SentryChassisConfig>>(controller_nh);
+        dyn_reconf_callback_ = boost::bind(&SentryChassisController::dynamicReconfigureCallback, this, _1, _2);
+        dyn_reconf_server_->setCallback(dyn_reconf_callback_);
+        ROS_INFO("动态参数服务器已初始化");
+
         //初始化 twist消息
         gotten_msg.linear.x = 0;
         gotten_msg.linear.y = 0;

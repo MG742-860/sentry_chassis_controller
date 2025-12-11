@@ -140,3 +140,14 @@ hash：d45e61d35301a67fdd939d3411cd9d0e9dcf9832
 branch：(HEAD -> master, origin/master)
 
 date：2025.12.10 13：51
+
+##### 第十三次提交
+
+log：
+添加了动态参数服务器动态调参插件，现在可以用rqt动态调参了
+
+hash：
+
+branch：(HEAD -> master, origin/master)
+
+date：2025.12.11 12：48

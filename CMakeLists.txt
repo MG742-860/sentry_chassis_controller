@@ -7,6 +7,9 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+
+
+
 find_package(catkin REQUIRED COMPONENTS
   control_msgs
   controller_manager
@@ -24,8 +27,12 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_geometry_msgs
   nav_msgs
+  dynamic_reconfigure
 )
 
+generate_dynamic_reconfigure_options(
+  cfg/SentryChassisConfig.cfg
+)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -117,7 +124,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
    INCLUDE_DIRS include
-   LIBRARIES my_controller
+   LIBRARIES ${PROJECT_NAME}
 #  CATKIN_DEPENDS control_msgs controller_manager gazebo_ros hardware_interface roscpp
 #  DEPENDS system_lib
   CATKIN_DEPENDS
@@ -136,6 +143,7 @@ catkin_package(
     tf2
     tf2_geometry_msgs
     nav_msgs
+    dynamic_reconfigure
 )
 
 ###########
@@ -235,18 +243,25 @@ include_directories(
 # catkin_add_nosetests(test)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}/sentry_chassis_controller
 )
 include_directories(/include)
 
+
 add_library(${PROJECT_NAME} src/sentry_chassis_controller.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
-# 安装共享库和头文件（可选，但推荐）
+# 安装共享库和头文件
 install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
+
+target_link_libraries(${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+)
+
 install(DIRECTORY include/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
@@ -271,23 +286,6 @@ install(FILES chassis_controller_plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-## Export plugin - 使用正确的方式
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES my_controller
-  CATKIN_DEPENDS 
-    roscpp 
-    controller_interface 
-    hardware_interface 
-    control_toolbox
-    geometry_msgs
-    pluginlib
-    tf
-    tf2_ros
-    tf2
-    tf2_geometry_msgs
-    nav_msgs
-)
 
 # 添加可执行文件 teleop_twist_keyboard
 include_directories(/include)
@@ -298,3 +296,4 @@ add_dependencies(teleop_twist_keyboard ${${PROJECT_NAME}_EXPORTED_TARGETS} ${cat
 install(TARGETS teleop_twist_keyboard
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
