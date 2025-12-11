@@ -23,6 +23,7 @@ namespace sentry_chassis_controller {
         //轮距轴距
         wheel_track_ = controller_nh.param("wheel_track", 0.5);
         wheel_base_ = controller_nh.param("wheel_base", 0.5);
+        wheel_radius_ = controller_nh.param("wheel_radius", 0.0762);
         //速度、角度、转角最大值限制
         max_speed_ = controller_nh.param("max_speed", 1.0);
         max_angular_ = controller_nh.param("max_angular", 1.0);
@@ -246,8 +247,9 @@ namespace sentry_chassis_controller {
         }
     }
 
-    void SentryChassisController::calculateWheel(const double direction, const double speed)
+    void SentryChassisController::calculateWheel(const double direction, const double speed_src)
     {
+        double speed = speed_src / wheel_radius_;//目标速度转化为轮子转速
         // 根据驱动模式调整轮子速度
         switch (drive_mode_)
         {

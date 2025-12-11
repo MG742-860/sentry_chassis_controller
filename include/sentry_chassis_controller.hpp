@@ -104,7 +104,7 @@ namespace sentry_chassis_controller{
             hardware_interface::JointHandle front_left_pivot_joint_, front_right_pivot_joint_, back_left_pivot_joint_, back_right_pivot_joint_;
             hardware_interface::JointHandle front_left_wheel_joint_, front_right_wheel_joint_, back_left_wheel_joint_, back_right_wheel_joint_;
             double wheel_cmd_[4], pivot_cmd_[4];
-            double wheel_track_, wheel_base_;
+            double wheel_track_, wheel_base_, wheel_radius_;
             //关节发布
             ros::Publisher joint_state_pub_;
             sensor_msgs::JointState joint_state_msg_;

@@ -7,8 +7,8 @@
 //
 // ********************************************************/
 
-#ifndef __sentry_chassis_controller__SENTRYCHASSISCONFIGCONFIG_H__
-#define __sentry_chassis_controller__SENTRYCHASSISCONFIGCONFIG_H__
+#ifndef __sentry_chassis_controller__SENTRYCHASSISCONFIG_H__
+#define __sentry_chassis_controller__SENTRYCHASSISCONFIG_H__
 
 #if __cplusplus >= 201103L
 #define DYNAMIC_RECONFIGURE_FINAL final
@@ -568,7 +568,7 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.max_speed = 0.1;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      __max__.max_speed = 5.0;
+      __max__.max_speed = 9999.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __default__.max_speed = 1.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
@@ -578,7 +578,7 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.max_angular = 0.1;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      __max__.max_angular = 5.0;
+      __max__.max_angular = 10.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __default__.max_angular = 1.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
@@ -588,7 +588,7 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.max_direction = 10.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      __max__.max_direction = 180.0;
+      __max__.max_direction = 360.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __default__.max_direction = 90.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
@@ -598,7 +598,7 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.stop_time = 0.1;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      __max__.stop_time = 2.0;
+      __max__.stop_time = 5.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __default__.stop_time = 0.5;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
@@ -739,4 +739,4 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
 
 #undef DYNAMIC_RECONFIGURE_FINAL
 
-#endif // __SENTRYCHASSISCONFIGRECONFIGURATOR_H__
+#endif // __SENTRYCHASSISRECONFIGURATOR_H__
