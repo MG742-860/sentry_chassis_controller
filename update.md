@@ -146,7 +146,7 @@ date：2025.12.10 13：51
 log：
 添加了动态参数服务器动态调参插件，现在可以用rqt动态调参了
 
-hash：
+hash：84eed5de430fcba8e599b5f8c17d1dcdba705c28
 
 branch：(HEAD -> master, origin/master)
 
