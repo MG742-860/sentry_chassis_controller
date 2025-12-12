@@ -67,6 +67,16 @@ namespace sentry_chassis_controller{
         double total_torque_omega_ = 0.0;
     };
 
+    struct MotionLimits {
+        bool is_enable = false;
+        double max_linear_acceleration = 3.0;   // 最大线加速度 (m/s²)
+        double max_angular_acceleration = 5.0;  // 最大角加速度 (rad/s²)
+        double max_linear_deceleration = 5.0;   // 最大线减速度 (m/s²)
+        double max_angular_deceleration = 8.0;  // 最大角减速度 (rad/s²)
+        double last_vx_ = 0.0, last_vy_ = 0.0, last_omega_ = 0.0;//上一次的数据
+    };
+
+
     class SentryChassisController : public controller_interface::Controller<hardware_interface::EffortJointInterface>{
         public:
             //默认构造函数和析构函数
@@ -91,6 +101,7 @@ namespace sentry_chassis_controller{
             //计算轮子速度和转向角度
             void calculateWheel(double direction, double speed, wheel_state wheel_state_[]);
             void calculatePivot(double direction,double angular, wheel_state wheel_state_[]);
+            void applyAccelerationLimits(double& vx_target, double& vy_target, double& omega_target, const ros::Duration& period);
             void calculateWheelCommands(double vx, double vy,double angular);
             void handleDifferentialSteering(double angular);  //处理差速转向
 
@@ -129,6 +140,7 @@ namespace sentry_chassis_controller{
             std::shared_ptr<dynamic_reconfigure::Server<sentry_chassis_controller::SentryChassisConfig>> dyn_reconf_server_;
             dynamic_reconfigure::Server<sentry_chassis_controller::SentryChassisConfig>::CallbackType dyn_reconf_callback_;
             wheel_state wheel_state_[4];
+            MotionLimits motion_limits_;
 
             // /cmd_vel 相关
             ros::NodeHandle nh_;

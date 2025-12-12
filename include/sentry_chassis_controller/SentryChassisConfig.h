@@ -255,6 +255,11 @@ class DEFAULT
         if("max_speed"==(*_i)->name){max_speed = boost::any_cast<double>(val);}
         if("max_angular"==(*_i)->name){max_angular = boost::any_cast<double>(val);}
         if("max_direction"==(*_i)->name){max_direction = boost::any_cast<double>(val);}
+        if("enable_acceleration_limits"==(*_i)->name){enable_acceleration_limits = boost::any_cast<bool>(val);}
+        if("max_linear_acceleration"==(*_i)->name){max_linear_acceleration = boost::any_cast<double>(val);}
+        if("max_angular_acceleration"==(*_i)->name){max_angular_acceleration = boost::any_cast<double>(val);}
+        if("max_linear_deceleration"==(*_i)->name){max_linear_deceleration = boost::any_cast<double>(val);}
+        if("max_angular_deceleration"==(*_i)->name){max_angular_deceleration = boost::any_cast<double>(val);}
         if("speed_to_rotate"==(*_i)->name){speed_to_rotate = boost::any_cast<double>(val);}
         if("speed_diff_m"==(*_i)->name){speed_diff_m = boost::any_cast<int>(val);}
         if("stop_time"==(*_i)->name){stop_time = boost::any_cast<double>(val);}
@@ -289,6 +294,11 @@ double wheel_i_min;
 double max_speed;
 double max_angular;
 double max_direction;
+bool enable_acceleration_limits;
+double max_linear_acceleration;
+double max_angular_acceleration;
+double max_linear_deceleration;
+double max_angular_deceleration;
 double speed_to_rotate;
 int speed_diff_m;
 double stop_time;
@@ -345,6 +355,16 @@ bool print_odom;
       double max_angular;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       double max_direction;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      bool enable_acceleration_limits;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double max_linear_acceleration;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double max_angular_acceleration;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double max_linear_deceleration;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double max_angular_deceleration;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       double speed_to_rotate;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
@@ -673,6 +693,56 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
       Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_direction", "double", 0, "最大转向角度(度)", "", &SentryChassisConfig::max_direction)));
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_direction", "double", 0, "最大转向角度(度)", "", &SentryChassisConfig::max_direction)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.enable_acceleration_limits = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.enable_acceleration_limits = 1;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.enable_acceleration_limits = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("enable_acceleration_limits", "bool", 0, "是否启用加速度限制", "", &SentryChassisConfig::enable_acceleration_limits)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("enable_acceleration_limits", "bool", 0, "是否启用加速度限制", "", &SentryChassisConfig::enable_acceleration_limits)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.max_linear_acceleration = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.max_linear_acceleration = 10.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.max_linear_acceleration = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_linear_acceleration", "double", 0, "最大线加速度 (m/s²)", "", &SentryChassisConfig::max_linear_acceleration)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_linear_acceleration", "double", 0, "最大线加速度 (m/s²)", "", &SentryChassisConfig::max_linear_acceleration)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.max_angular_acceleration = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.max_angular_acceleration = 10.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.max_angular_acceleration = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_angular_acceleration", "double", 0, "最大角加速度 (rad/s²)", "", &SentryChassisConfig::max_angular_acceleration)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_angular_acceleration", "double", 0, "最大角加速度 (rad/s²)", "", &SentryChassisConfig::max_angular_acceleration)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.max_linear_deceleration = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.max_linear_deceleration = 10.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.max_linear_deceleration = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_linear_deceleration", "double", 0, "最大线减速度 (m/s²)", "", &SentryChassisConfig::max_linear_deceleration)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_linear_deceleration", "double", 0, "最大线减速度 (m/s²)", "", &SentryChassisConfig::max_linear_deceleration)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.max_angular_deceleration = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.max_angular_deceleration = 10.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.max_angular_deceleration = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_angular_deceleration", "double", 0, "最大角减速度 (rad/s²)", "", &SentryChassisConfig::max_angular_deceleration)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_angular_deceleration", "double", 0, "最大角减速度 (rad/s²)", "", &SentryChassisConfig::max_angular_deceleration)));
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.speed_to_rotate = 0.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"

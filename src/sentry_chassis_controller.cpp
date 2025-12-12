@@ -33,11 +33,16 @@ namespace sentry_chassis_controller {
             wheel_state_[i].direction_m_ = atan2(wheel_state_[i].y_,wheel_state_[i].x_);
         }
         
-        //速度、角度、转角最大值限制
+        //速度、角度、转角最大值、加速度限制
         max_speed_ = controller_nh.param("max_speed", 1.0);
         max_angular_ = controller_nh.param("max_angular", 1.0);
         double max_direction_c = controller_nh.param("max_direction", 90.0);
         max_direction_ = max_direction_c * M_PI / 180.0; // 转化为弧度
+        motion_limits_.is_enable = controller_nh.param("enable_acceleration_limits", false);
+        motion_limits_.max_linear_acceleration = controller_nh.param("max_linear_acceleration", 3.0);
+        motion_limits_.max_angular_acceleration = controller_nh.param("max_angular_acceleration", 5.0);
+        motion_limits_.max_linear_deceleration = controller_nh.param("max_linear_deceleration", 5.0);
+        motion_limits_.max_angular_deceleration = controller_nh.param("max_angular_deceleration", 8.0);
         //小陀螺系数
         speed_to_rotate_ = controller_nh.param("speed_to_rotate", 100.0);
         //履带模式差速系数
@@ -186,6 +191,11 @@ namespace sentry_chassis_controller {
         max_speed_ = config.max_speed;
         max_angular_ = config.max_angular;
         max_direction_ = config.max_direction * M_PI / 180.0;  // 度转弧度
+        motion_limits_.is_enable = config.enable_acceleration_limits;
+        motion_limits_.max_angular_acceleration = config.max_angular_acceleration;
+        motion_limits_.max_linear_acceleration = config.max_linear_acceleration;
+        motion_limits_.max_angular_deceleration = config.max_angular_deceleration;
+        motion_limits_.max_linear_deceleration = config.max_linear_deceleration;
         stop_time_ = config.stop_time;
         
         // 更新小陀螺系数控制和履带模式差速系数
@@ -321,7 +331,8 @@ namespace sentry_chassis_controller {
                     {
                         direction_limit[i] = M_PI*(direction_limit[i]/fabs(direction_limit[i])) - direction_limit[i];
                     }
-                    direction_limit[i] = fabs(direction_limit[i])<max_direction_?direction_limit[i]:max_direction_*(direction_limit[i]/fabs(direction_limit[i]));
+                    direction_limit[i] = fabs(direction_limit[i])<max_direction_?direction_limit[i]:max_direction_*
+                                                        (direction_limit[i]/fabs(direction_limit[i]));
                 } 
                 pivot_cmd_[0] = direction_limit[0];//左前
                 pivot_cmd_[1] = direction_limit[1];//右前
@@ -336,7 +347,8 @@ namespace sentry_chassis_controller {
                     {
                         direction_limit[i] = M_PI*(direction_limit[i]/fabs(direction_limit[i])) - direction_limit[i];
                     }
-                    direction_limit[i] = fabs(direction_limit[i])<max_direction_?direction_limit[i]:max_direction_*(direction_limit[i]/fabs(direction_limit[i]));
+                    direction_limit[i] = fabs(direction_limit[i])<max_direction_?direction_limit[i]:max_direction_*(
+                                                        direction_limit[i]/fabs(direction_limit[i]));
                 } 
                 pivot_cmd_[0] = 0;//左前
                 pivot_cmd_[1] = 0;//右前
@@ -393,6 +405,47 @@ namespace sentry_chassis_controller {
                 wheel_cmd_[3] += speed_diff/wheel_radius_;  // 右后轮加速
                 break;
         }
+    }
+
+    void SentryChassisController::applyAccelerationLimits(double& vx_target, double& vy_target, double& omega_target, const ros::Duration& period)
+    {
+        // 计算速度变化量
+        double delta_vx = vx_target - motion_limits_.last_vx_;
+        double delta_vy = vy_target - motion_limits_.last_vy_;
+        double delta_omega = omega_target - motion_limits_.last_omega_;
+        
+        // 计算合速度大小
+        double current_speed = sqrt(motion_limits_.last_vx_*motion_limits_.last_vx_ + motion_limits_.last_vy_*motion_limits_.last_vy_);
+        double target_speed = sqrt(vx_target*vx_target + vy_target*vy_target);
+        
+        // 判断是加速还是减速
+        bool is_accelerating = (target_speed > current_speed);
+        double max_linear_accel = is_accelerating ? 
+            motion_limits_.max_linear_acceleration : motion_limits_.max_linear_deceleration;
+        double max_angular_accel = is_accelerating ? 
+            motion_limits_.max_angular_acceleration : motion_limits_.max_angular_deceleration;
+        
+        // 限制线加速度
+        double max_delta_linear = max_linear_accel * period.toSec();
+        double delta_speed = sqrt(delta_vx*delta_vx + delta_vy*delta_vy);
+        
+        if (delta_speed > max_delta_linear) {
+            // 按比例缩放速度增量
+            double scale = max_delta_linear / delta_speed;
+            vx_target = motion_limits_.last_vx_ + delta_vx * scale;
+            vy_target = motion_limits_.last_vy_ + delta_vy * scale;
+        }
+        
+        // 限制角加速度
+        double max_delta_angular = max_angular_accel * period.toSec();
+        if (fabs(delta_omega) > max_delta_angular) {
+            omega_target = motion_limits_.last_omega_ + copysign(max_delta_angular, delta_omega);
+        }
+        
+        // 更新记录的速度值
+        motion_limits_.last_vx_ = vx_target;
+        motion_limits_.last_vy_ = vy_target;
+        motion_limits_.last_omega_ = omega_target;
     }
 
     void SentryChassisController::calculateWheelCommands(double vx, double vy, double angular)
@@ -877,6 +930,7 @@ namespace sentry_chassis_controller {
         //计算xy变换
         convertToRobotFrame(robot_vx, robot_vy, robot_angular);
         //计算轮子速度和转向角度
+        applyAccelerationLimits(robot_vx, robot_vy, robot_angular, period);
         calculateWheelCommands(robot_vx, robot_vy,robot_angular);
         //应用功率限制
         applyPowerLimiting();
