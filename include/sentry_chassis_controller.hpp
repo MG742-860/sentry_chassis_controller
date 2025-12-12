@@ -13,6 +13,8 @@
 #include <cmath>
 #include <memory>
 #include <dynamic_reconfigure/server.h>
+#include <Eigen/Dense>
+#include <Eigen/QR>
 #include "sentry_chassis_controller/SentryChassisConfig.h"
 namespace sentry_chassis_controller{
 

@@ -453,6 +453,12 @@ namespace sentry_chassis_controller {
             wheel_state_d[i].direction_ = atan2(wheel_state_d[i].vy_, wheel_state_d[i].vx_);
             wheel_state_d[i].speed_ = sqrt(pow(wheel_state_d[i].vx_,2)+pow(wheel_state_d[i].vy_,2))*(fabs(wheel_state_d[i].direction_) > M_PI_2 ? -1:1);
         }
+        //更新轮子数据
+        for (int i = 0; i < 4; i++)
+        {
+            wheel_state_[i] = wheel_state_d[i];
+        }
+        
         //先将数据置零
         for (int i = 0; i < 4; i++)
         {
@@ -467,51 +473,133 @@ namespace sentry_chassis_controller {
 
     void SentryChassisController::calculateOdometry(const ros::Duration& period)
     {
-        // 获取实际轮子速度(m/s)
-        double fl_wheel_vel = front_left_wheel_joint_.getVelocity();
-        double fr_wheel_vel = front_right_wheel_joint_.getVelocity();
-        double bl_wheel_vel = back_left_wheel_joint_.getVelocity();
-        double br_wheel_vel = back_right_wheel_joint_.getVelocity();
+        // 1. 获取实际传感器数据（编码器读数）
+        double fl_wheel_omega = front_left_wheel_joint_.getVelocity();  // 左前轮角速度 rad/s
+        double fr_wheel_omega = front_right_wheel_joint_.getVelocity(); // 右前轮角速度 rad/s
+        double bl_wheel_omega = back_left_wheel_joint_.getVelocity();   // 左后轮角速度 rad/s
+        double br_wheel_omega = back_right_wheel_joint_.getVelocity();  // 右后轮角速度 rad/s
         
-        // 获取实际转向角度
+        // 2. 将角速度转换为线速度 (m/s)
+        double fl_wheel_vel = fl_wheel_omega * wheel_radius_;
+        double fr_wheel_vel = fr_wheel_omega * wheel_radius_;
+        double bl_wheel_vel = bl_wheel_omega * wheel_radius_;
+        double br_wheel_vel = br_wheel_omega * wheel_radius_;
+        
+        // 3. 获取实际转向角度（编码器读数）
         double fl_pivot_angle = front_left_pivot_joint_.getPosition();
         double fr_pivot_angle = front_right_pivot_joint_.getPosition();
         double bl_pivot_angle = back_left_pivot_joint_.getPosition();
         double br_pivot_angle = back_right_pivot_joint_.getPosition();
-   
-        // 全向移动模式：根据实际轮子速度和角度计算底盘速度
-        rob_state_.vx = (fl_wheel_vel * cos(fl_pivot_angle) + fr_wheel_vel * cos(fr_pivot_angle) + bl_wheel_vel * cos(bl_pivot_angle) + br_wheel_vel * cos(br_pivot_angle)) / 4.0;         
-        rob_state_.vy = (fl_wheel_vel * sin(fl_pivot_angle) + fr_wheel_vel * sin(fr_pivot_angle) + bl_wheel_vel * sin(bl_pivot_angle) + br_wheel_vel * sin(br_pivot_angle)) / 4.0;
-        // 计算角速度：使用差速模型
-        // 对于万向轮，角速度计算比较复杂，这里使用简化方法
-        double avg_pivot_angle = (fl_pivot_angle + fr_pivot_angle + bl_pivot_angle + br_pivot_angle) / 4.0;
-        rob_state_.omega = (avg_pivot_angle - rob_state_.theta) / period.toSec();
-
-        //限制速度范围，避免发生异常
-        const double MAX_VELOCITY = max_speed_; // 最大线速度 (m/s)
-        const double MAX_OMEGA = 5.0; // 最大角速度 (rad/s)
+        
+        // 4. 使用运动学模型计算机器人速度
+        // 对于每个轮子 i：v_wheel_i = [cos(θ_i), sin(θ_i)] * [vx - ω*y_i, vy + ω*x_i]
+        // 我们可以构建线性方程组并求解 vx, vy, ω
+        
+        // 由于这是超定方程组（4个方程，3个未知数），我们使用最小二乘法
+        // 构建矩阵 A (4x3) 和向量 b (4x1)
+        Eigen::MatrixXd A(4, 3);
+        Eigen::VectorXd b(4);
+        
+        // 轮子位置（相对于机器人中心）
+        double x[4] = {wheel_state_[0].x_, wheel_state_[1].x_, wheel_state_[2].x_, wheel_state_[3].x_};
+        double y[4] = {wheel_state_[0].y_, wheel_state_[1].y_, wheel_state_[2].y_, wheel_state_[3].y_};
+        
+        // 实际轮子线速度
+        double v_wheel[4] = {fl_wheel_vel, fr_wheel_vel, bl_wheel_vel, br_wheel_vel};
+        double theta[4] = {fl_pivot_angle, fr_pivot_angle, bl_pivot_angle, br_pivot_angle};
+        
+        // 填充矩阵A和向量b
+        for (int i = 0; i < 4; i++) {
+            // 方程：cos(θ_i)*(vx - ω*y_i) + sin(θ_i)*(vy + ω*x_i) = v_wheel_i
+            A(i, 0) = cos(theta[i]);  // vx 系数
+            A(i, 1) = sin(theta[i]);  // vy 系数
+            A(i, 2) = -cos(theta[i]) * y[i] + sin(theta[i]) * x[i];  // ω 系数
+            b(i) = v_wheel[i];
+        }
+        
+        // 5. 使用最小二乘法求解：X = (A^T * A)^(-1) * A^T * b
+        Eigen::Vector3d X;
+        try {
+            // 使用QR分解求解最小二乘问题（更稳定）
+            X = A.householderQr().solve(b);
+            
+            // 检查解的有效性
+            if (!X.allFinite()) {
+                ROS_WARN_THROTTLE(1.0, "Invalid odometry solution, using previous values");
+                // 使用上一次的速度值
+                X(0) = rob_state_.vx;
+                X(1) = rob_state_.vy;
+                X(2) = rob_state_.omega;
+            }
+        } catch (const std::exception& e) {
+            ROS_WARN_THROTTLE(1.0, "Odometry calculation failed: %s", e.what());
+            // 使用上一次的速度值
+            X(0) = rob_state_.vx;
+            X(1) = rob_state_.vy;
+            X(2) = rob_state_.omega;
+        }
+        
+        // 6. 更新机器人状态
+        rob_state_.vx = X(0);
+        rob_state_.vy = X(1);
+        rob_state_.omega = X(2);
+        
+        // 7. 限制速度范围，避免异常值
+        const double MAX_VELOCITY = max_speed_ * 1.2;  // 稍微放宽限制
+        const double MAX_OMEGA = max_angular_ * 1.2;
+        
         rob_state_.vx = std::max(std::min(rob_state_.vx, MAX_VELOCITY), -MAX_VELOCITY);
         rob_state_.vy = std::max(std::min(rob_state_.vy, MAX_VELOCITY), -MAX_VELOCITY);
         rob_state_.omega = std::max(std::min(rob_state_.omega, MAX_OMEGA), -MAX_OMEGA);
-
-        //更新机器人位置和姿态(积分)
-        //将机体坐标系下的速度转换到全局坐标系下
-        double delta_x = (rob_state_.vx * cos(rob_state_.theta) - rob_state_.vy * sin(rob_state_.theta)) * period.toSec();
-        double delta_y = (rob_state_.vx * sin(rob_state_.theta) + rob_state_.vy * cos(rob_state_.theta)) * period.toSec();
-        double delta_theta = rob_state_.omega * period.toSec();
-
-        rob_state_.x += delta_x, rob_state_.y += delta_y, rob_state_.theta += delta_theta;//更新位置和姿态
-
-        // 归一化theta到[-pi, pi]
-        while (rob_state_.theta > M_PI) rob_state_.theta -= 2.0 * M_PI;
-        while (rob_state_.theta < -M_PI) rob_state_.theta += 2.0 * M_PI;
         
-        //调试输出
+        // 8. 低通滤波，平滑速度估计
+        static bool first_run = true;
+        static double prev_vx = 0, prev_vy = 0, prev_omega = 0;
+        const double alpha = 0.3;  // 滤波系数，值越小越平滑
+        
+        if (first_run) {
+            prev_vx = rob_state_.vx;
+            prev_vy = rob_state_.vy;
+            prev_omega = rob_state_.omega;
+            first_run = false;
+        } else {
+            rob_state_.vx = alpha * rob_state_.vx + (1 - alpha) * prev_vx;
+            rob_state_.vy = alpha * rob_state_.vy + (1 - alpha) * prev_vy;
+            rob_state_.omega = alpha * rob_state_.omega + (1 - alpha) * prev_omega;
+            
+            prev_vx = rob_state_.vx;
+            prev_vy = rob_state_.vy;
+            prev_omega = rob_state_.omega;
+        }
+        
+        // 9. 积分得到位置和姿态
+        double dt = period.toSec();
+        if (dt > 0.0 && dt < 0.1) {  // 确保时间步长合理
+            // 将机体坐标系速度转换到全局坐标系
+            double cos_theta = cos(rob_state_.theta);
+            double sin_theta = sin(rob_state_.theta);
+            
+            double delta_x = (rob_state_.vx * cos_theta - rob_state_.vy * sin_theta) * dt;
+            double delta_y = (rob_state_.vx * sin_theta + rob_state_.vy * cos_theta) * dt;
+            double delta_theta = rob_state_.omega * dt;
+            
+            rob_state_.x += delta_x;
+            rob_state_.y += delta_y;
+            rob_state_.theta += delta_theta;
+            
+            // 归一化theta到[-π, π]
+            while (rob_state_.theta > M_PI) rob_state_.theta -= 2.0 * M_PI;
+            while (rob_state_.theta < -M_PI) rob_state_.theta += 2.0 * M_PI;
+        }
+        
+        // 10. 调试输出
         static int odom_count = 0;
-        if (++odom_count % 100 == 0 && odom_show_) // 每100次打印一次
+        if (++odom_count % 100 == 0 && odom_show_)
         {
-            ROS_INFO("Odometry Update: x=%.3f, y=%.3f, theta=%.3f, vx=%.3f, vy=%.3f, omega=%.3f", rob_state_.x, rob_state_.y, rob_state_.theta, rob_state_.vx, rob_state_.vy, rob_state_.omega);
-            odom_count = 0;// 打印后重置计数器
+            ROS_INFO("Odometry Update: x=%.3f, y=%.3f, theta=%.3f, vx=%.3f, vy=%.3f, omega=%.3f", 
+                    rob_state_.x, rob_state_.y, rob_state_.theta, 
+                    rob_state_.vx, rob_state_.vy, rob_state_.omega);
+            odom_count = 0;
         }
     }
 
