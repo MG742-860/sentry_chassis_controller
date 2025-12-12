@@ -151,3 +151,15 @@ hash：84eed5de430fcba8e599b5f8c17d1dcdba705c28
 branch：(HEAD -> master, origin/master)
 
 date：2025.12.11 12：48
+
+##### 第十四次提交
+
+log：
+增加配置文件修改参数，修正运动学计算模型
+
+hash：ee2e06d34b7244a9c25981ca3f4fc6b5a13a1ded
+
+branch：(HEAD -> master, origin/master)
+
+date：2025.12.12 14:25
+
