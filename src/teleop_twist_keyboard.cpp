@@ -179,44 +179,53 @@ void TeleopTwistKeyboard::run()
             if(key == key_bindings_.forward)
             {
                 twist_msg_.linear.x = initial_linear_;
+                printf("\rRead command: forward");
             }
             else if(key == key_bindings_.backward)
             {
                 twist_msg_.linear.x = -initial_linear_;
+                printf("\rRead command: backward");
             }
             else if(key == key_bindings_.left)
             {
                 twist_msg_.linear.y = initial_linear_;
                 twist_msg_.angular.z = initial_angular_;
+                printf("\rRead command: left");
             }
             else if(key == key_bindings_.right)
             {
                 twist_msg_.linear.y = -initial_linear_;
                 twist_msg_.angular.z = -initial_angular_;
+                printf("\rRead command: right");
             }
             else if(key == key_bindings_.stop)
             {
                 // all zero
+                printf("\rRead command: stop");
             }
             else if(key == key_bindings_.forward_left)
             {
                 twist_msg_.linear.x = initial_linear_;
                 twist_msg_.linear.y = initial_linear_;
+                printf("\rRead command: forward_left");
             }
             else if(key == key_bindings_.forward_right)
             {
                 twist_msg_.linear.x = initial_linear_;
                 twist_msg_.linear.y = -initial_linear_;
+                printf("\rRead command: forward_right");
             }
             else if(key == key_bindings_.backward_left)
             {
                 twist_msg_.linear.x = -initial_linear_;
                 twist_msg_.linear.y = initial_linear_;
+                printf("\rRead command: backward_left");
             }
             else if(key == key_bindings_.backward_right)
             {
                 twist_msg_.linear.x = -initial_linear_;
                 twist_msg_.linear.y = -initial_linear_;
+                printf("\rRead command: backward_right");
             }
             else if(key == key_bindings_.increase_linear)
             {
@@ -243,10 +252,12 @@ void TeleopTwistKeyboard::run()
             else if(key == key_bindings_.left_rotate)
             {
                 twist_msg_.angular.z = initial_angular_;
+                printf("\rRead command: left_rotate");
             }
             else if(key == key_bindings_.right_rotate)
             {
                 twist_msg_.angular.z = -initial_angular_;
+                printf("\rRead command: right_rotate");
             }
             else if(key == 3) // CTRL+C
             {

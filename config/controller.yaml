@@ -34,7 +34,6 @@ sentry_chassis_controller:
   k1: 0.001
   k2: 0.0001
   torque_constant: 0.05
-  static_friction_current: 0.5
 
   # 坐标系配置
   coordinate_mode: false  # false: 底盘坐标系，true: 全局坐标系
@@ -46,7 +45,7 @@ sentry_chassis_controller:
   turn_mode: 0    # 可选值: Forward=0, Backward=1, All=2, None=3 前转 后转 全转 履带(不转)
   
   # 小陀螺系数控制
-  speed_to_rotate: 100
+  speed_to_rotate: 1
   # 履带模式差速系数
   speed_diff_m: 100
 

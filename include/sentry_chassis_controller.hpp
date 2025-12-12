@@ -29,6 +29,16 @@ namespace sentry_chassis_controller{
         NoneTurn =3//履带-不转
     };
 
+    struct wheel_state {
+        double vx_ = 0;
+        double vy_ = 0;
+        double x_ = 0;
+        double y_ = 0;
+        double direction_ = 0;
+        double direction_m_ = 0;
+        double speed_ = 0;
+    };
+
     struct rob_state{
         double x;           // x位置 (m)
         double y;           // y位置 (m)
@@ -77,8 +87,8 @@ namespace sentry_chassis_controller{
             void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg);
             void convertToRobotFrame(double& robot_x, double& robot_y, double& robot_angular);//(轮子)坐标变换函数 odom -> base_link
             //计算轮子速度和转向角度
-            void calculateWheel(double direction, double speed);
-            void calculatePivot(double direction,double angular);
+            void calculateWheel(double direction, double speed, wheel_state wheel_state_[]);
+            void calculatePivot(double direction,double angular, wheel_state wheel_state_[]);
             void calculateWheelCommands(double vx, double vy,double angular);
             void handleDifferentialSteering(double angular);  //处理差速转向
 
@@ -116,6 +126,7 @@ namespace sentry_chassis_controller{
             control_toolbox::Pid::Gains gains_pivot_, gains_wheel_;
             std::shared_ptr<dynamic_reconfigure::Server<sentry_chassis_controller::SentryChassisConfig>> dyn_reconf_server_;
             dynamic_reconfigure::Server<sentry_chassis_controller::SentryChassisConfig>::CallbackType dyn_reconf_callback_;
+            wheel_state wheel_state_[4];
 
             // /cmd_vel 相关
             ros::NodeHandle nh_;

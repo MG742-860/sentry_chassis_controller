@@ -24,6 +24,15 @@ namespace sentry_chassis_controller {
         wheel_track_ = controller_nh.param("wheel_track", 0.5);
         wheel_base_ = controller_nh.param("wheel_base", 0.5);
         wheel_radius_ = controller_nh.param("wheel_radius", 0.0762);
+        wheel_state_[0].x_ = -wheel_base_/2, wheel_state_[0].y_ = wheel_track_/2;
+        wheel_state_[1].x_ = wheel_base_/2, wheel_state_[1].y_ = wheel_track_/2;
+        wheel_state_[2].x_ = -wheel_base_/2, wheel_state_[2].y_ = -wheel_track_/2;
+        wheel_state_[3].x_ = wheel_base_/2, wheel_state_[3].y_ = -wheel_track_/2;
+        for (int i = 0; i < 4; i++)
+        {
+            wheel_state_[i].direction_m_ = atan2(wheel_state_[i].y_,wheel_state_[i].x_);
+        }
+        
         //速度、角度、转角最大值限制
         max_speed_ = controller_nh.param("max_speed", 1.0);
         max_angular_ = controller_nh.param("max_angular", 1.0);
@@ -151,7 +160,13 @@ namespace sentry_chassis_controller {
 
     void SentryChassisController::dynamicReconfigureCallback(sentry_chassis_controller::SentryChassisConfig &config, uint32_t level)
     {
+        setlocale(LC_ALL, "");
         ROS_INFO("动态参数更新 (level: %d)", level);
+        
+        // 更新轮子参数
+        wheel_track_ = config.wheel_track;
+        wheel_base_ = config.wheel_base;
+        wheel_radius_ = config.wheel_radius;
         
         // 更新转向关节PID参数
         gains_pivot_.p_gain_ = config.pivot_p_gain;
@@ -173,9 +188,24 @@ namespace sentry_chassis_controller {
         max_direction_ = config.max_direction * M_PI / 180.0;  // 度转弧度
         stop_time_ = config.stop_time;
         
+        // 更新小陀螺系数控制和履带模式差速系数
+        speed_to_rotate_ = config.speed_to_rotate;
+        speed_diff_m_ = config.speed_diff_m;
+        
         // 更新功率参数
         power_mgt_.max_power_ = config.max_power;
         power_mgt_.is_enable_ = config.enable_power_limit;
+        power_mgt_.is_print_ = config.enable_power_print;
+        power_mgt_.k1_ = config.k1;
+        power_mgt_.k2_ = config.k2;
+        power_mgt_.torque_constant_ = config.torque_constant;
+        
+        // 更新坐标系模式
+        coordinate_mode_ = config.coordinate_mode;
+        
+        // 更新驱动和转向模式
+        drive_mode_ = static_cast<DriveMode>(config.drive_mode);
+        turn_mode_ = static_cast<TurnMode>(config.turn_mode);
         
         // 更新调试选项
         print_expected_speed_ = config.print_expected_speed;
@@ -187,9 +217,11 @@ namespace sentry_chassis_controller {
         
         ROS_INFO("PID参数已更新:");
         ROS_INFO("  转向关节 - P:%.2f, I:%.2f, D:%.2f", 
-                 gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_);
+                gains_pivot_.p_gain_, gains_pivot_.i_gain_, gains_pivot_.d_gain_);
         ROS_INFO("  驱动轮 - P:%.2f, I:%.2f, D:%.2f", 
-                 gains_wheel_.p_gain_, gains_wheel_.i_gain_, gains_wheel_.d_gain_);
+                gains_wheel_.p_gain_, gains_wheel_.i_gain_, gains_wheel_.d_gain_);
+        ROS_INFO("  驱动模式: %d, 转向模式: %d", config.drive_mode, config.turn_mode);
+        ROS_INFO("  坐标系模式: %s", coordinate_mode_ ? "全局坐标系" : "底盘坐标系");
     }
 
     void SentryChassisController::publishJointStates(){
@@ -247,66 +279,74 @@ namespace sentry_chassis_controller {
         }
     }
 
-    void SentryChassisController::calculateWheel(const double direction, const double speed_src)
+    void SentryChassisController::calculateWheel(const double direction_src, const double speed_src,wheel_state wheel_state_dd[])
     {
         double speed = speed_src / wheel_radius_;//目标速度转化为轮子转速
         // 根据驱动模式调整轮子速度
         switch (drive_mode_)
         {
             case ForwardDrive://前驱
-                wheel_cmd_[0] += speed;//左前
-                wheel_cmd_[1] += speed;//右前
+                wheel_cmd_[0] += (fabs(wheel_state_dd[0].speed_)/wheel_radius_)*(fabs(direction_src)>M_PI_2?(-1):1);//左前
+                wheel_cmd_[1] += (fabs(wheel_state_dd[1].speed_)/wheel_radius_)*(fabs(direction_src)>M_PI_2?(-1):1);//右前
                 wheel_cmd_[2] = 0;//左后
                 wheel_cmd_[3] = 0;//右后
                 break;
             case BackwardDrive://后驱
                 wheel_cmd_[0] = 0;//左前
                 wheel_cmd_[1] = 0;//右前
-                wheel_cmd_[2] += speed;//左后
-                wheel_cmd_[3] += speed;//右后
+                wheel_cmd_[2] += (fabs(wheel_state_dd[2].speed_)/wheel_radius_)*(fabs(direction_src)>M_PI_2?(-1):1);//左后
+                wheel_cmd_[3] += (fabs(wheel_state_dd[3].speed_)/wheel_radius_)*(fabs(direction_src)>M_PI_2?(-1):1);//右后
                 break;
             case AllDrive://全驱(默认)
             default:
                 for (int i = 0; i < 4; i++)
                 {
-                    wheel_cmd_[i] += (turn_mode_ == AllTurn)?fabs(speed):speed;
+                    wheel_cmd_[i] += (turn_mode_ == AllTurn)?fabs(wheel_state_dd[i].speed_/wheel_radius_):(fabs(wheel_state_dd[i].speed_)/wheel_radius_)*(fabs(direction_src)>M_PI_2?(-1):1);
                 }
                 break;
         }
     }
 
-    void SentryChassisController::calculatePivot(const double direction_src, const double angular)//传入的是方向角、角速度
+    void SentryChassisController::calculatePivot(const double direction_src, const double angular, wheel_state wheel_state_dd[])//传入的是方向角、角速度
     {
-        double direction_limit = direction_src;
+        double direction_limit[4] = {direction_src};
         // 根据转向模式调整轮子转向角度
         switch (turn_mode_)
         {
             case ForwardTurn://前轮转向
-                if (fabs(direction_limit) >= M_PI_2 - 1e-6)
+                for (int i = 0; i < 2; i++)
                 {
-                    direction_limit = M_PI*(direction_limit/fabs(direction_limit)) - direction_limit;
-                    direction_limit = fabs(max_direction_)<fabs(direction_limit)?(max_direction_)*(direction_limit/fabs(direction_limit)):direction_limit;
-                }
-                pivot_cmd_[0] = direction_limit;//左前
-                pivot_cmd_[1] = direction_limit;//右前
+                    direction_limit[i] = wheel_state_dd[i].direction_;
+                    if(fabs(direction_limit[i])>M_PI_2)
+                    {
+                        direction_limit[i] = M_PI*(direction_limit[i]/fabs(direction_limit[i])) - direction_limit[i];
+                    }
+                    direction_limit[i] = fabs(direction_limit[i])<max_direction_?direction_limit[i]:max_direction_*(direction_limit[i]/fabs(direction_limit[i]));
+                } 
+                pivot_cmd_[0] = direction_limit[0];//左前
+                pivot_cmd_[1] = direction_limit[1];//右前
                 pivot_cmd_[2] = 0;//左后
                 pivot_cmd_[3] = 0;//右后
                 break;
             case BackwardTurn://后轮转向
-                if (fabs(direction_limit) >= M_PI_2 - 1e-6)
+                for (int i = 2; i < 4; i++)
                 {
-                    direction_limit = M_PI*(direction_limit/fabs(direction_limit)) - direction_limit;
-                    direction_limit = fabs(max_direction_)<fabs(direction_limit)?(max_direction_)*(direction_limit/fabs(direction_limit)):direction_limit;
-                }
+                    direction_limit[i] = wheel_state_dd[i].direction_;
+                    if(fabs(direction_limit[i])>M_PI_2)
+                    {
+                        direction_limit[i] = M_PI*(direction_limit[i]/fabs(direction_limit[i])) - direction_limit[i];
+                    }
+                    direction_limit[i] = fabs(direction_limit[i])<max_direction_?direction_limit[i]:max_direction_*(direction_limit[i]/fabs(direction_limit[i]));
+                } 
                 pivot_cmd_[0] = 0;//左前
                 pivot_cmd_[1] = 0;//右前
-                pivot_cmd_[2] = -direction_limit;//左后
-                pivot_cmd_[3] = -direction_limit;//右后
+                pivot_cmd_[2] = -direction_limit[2];//左后
+                pivot_cmd_[3] = -direction_limit[3];//右后
                 break;
             case AllTurn://全轮转向(默认)
                 for (int i = 0; i < 4; i++)
                 {
-                    pivot_cmd_[i] = direction_src;
+                    pivot_cmd_[i] = wheel_state_dd[i].direction_;
                 }         
                 break;
             case NoneTurn://不转向
@@ -315,7 +355,7 @@ namespace sentry_chassis_controller {
                     pivot_cmd_[i] = 0;
                 }
                 //然后应用差速转向(修改轮子速度)
-                handleDifferentialSteering(angular);
+                handleDifferentialSteering(direction_src);
                 break;
             default:
                 // 不做任何限制
@@ -323,7 +363,7 @@ namespace sentry_chassis_controller {
         }
     }
 
-    void SentryChassisController::handleDifferentialSteering(double angular)
+    void SentryChassisController::handleDifferentialSteering(const double angular)
     {
         if (fabs(angular) < 1e-6) 
         {
@@ -336,27 +376,33 @@ namespace sentry_chassis_controller {
         switch (drive_mode_) 
         {
             case ForwardDrive:  // 前驱差速
-                wheel_cmd_[0] -= speed_diff;  // 左前轮减速
-                wheel_cmd_[1] += speed_diff;  // 右前轮加速
+                wheel_cmd_[0] -= speed_diff/wheel_radius_;  // 左前轮减速
+                wheel_cmd_[1] += speed_diff/wheel_radius_;  // 右前轮加速
                 break;
                 
             case BackwardDrive:  // 后驱差速
-                wheel_cmd_[2] -= speed_diff;  // 左后轮减速
-                wheel_cmd_[3] += speed_diff;  // 右后轮加速
+                wheel_cmd_[2] -= speed_diff/wheel_radius_;  // 左后轮减速
+                wheel_cmd_[3] += speed_diff/wheel_radius_;  // 右后轮加速
                 break;
                 
             case AllDrive:  // 四驱差速
             default:
-                wheel_cmd_[0] -= speed_diff;  // 左前轮减速
-                wheel_cmd_[1] += speed_diff;  // 右前轮加速
-                wheel_cmd_[2] -= speed_diff;  // 左后轮减速
-                wheel_cmd_[3] += speed_diff;  // 右后轮加速
+                wheel_cmd_[0] -= speed_diff/wheel_radius_;  // 左前轮减速
+                wheel_cmd_[1] += speed_diff/wheel_radius_;  // 右前轮加速
+                wheel_cmd_[2] -= speed_diff/wheel_radius_;  // 左后轮减速
+                wheel_cmd_[3] += speed_diff/wheel_radius_;  // 右后轮加速
                 break;
         }
     }
 
     void SentryChassisController::calculateWheelCommands(double vx, double vy, double angular)
     {
+        static wheel_state wheel_state_d[4];
+        for (int i = 0; i < 4; i++)
+        {
+            wheel_state_d[i] = wheel_state_[i];
+        }
+        
         //先判断键盘是否有消息
         if (!received_msg_)
         {
@@ -364,13 +410,9 @@ namespace sentry_chassis_controller {
             for (int i = 0; i < 4; i++)
             {
                 wheel_cmd_[i] = 0;//速度归零
+                pivot_cmd_[i] = wheel_state_d[i].direction_m_;//轮子正交
             }
-                //轮子角度互交
-                pivot_cmd_[0] = -M_PI_2 * 0.5;
-                pivot_cmd_[1] = -M_PI * 0.75;
-                pivot_cmd_[2] = M_PI_2 * 0.5;
-                pivot_cmd_[3] = M_PI * 0.75;
-                //不打印预期值，避免终端信息污染
+            //不打印预期值，避免终端信息污染
             return;
         }
         //如果有消息，判断是否超过设定的最大值
@@ -392,28 +434,33 @@ namespace sentry_chassis_controller {
         {
             for (int i = 0; i < 4; i++)
             {
-                wheel_cmd_[i] = -(angular * speed_to_rotate_);
+                wheel_cmd_[i] = (sqrt(pow(angular*(wheel_base_/2), 2)+pow(angular*(wheel_track_/2), 2))*(angular>0?1:-1)*speed_to_rotate_)/wheel_radius_;
+                pivot_cmd_[i] = wheel_state_[i].direction_m_;//轮子正交
             }
-            //轮子角度互交
-            pivot_cmd_[0] = -M_PI_2 * 0.5;
-            pivot_cmd_[1] = -M_PI * 0.75;
-            pivot_cmd_[2] = M_PI_2 * 0.5;
-            pivot_cmd_[3] = M_PI * 0.75;
             printExpectedSpeed();
             return;
         }
 
         //计算方向和速度
+        //整体
         double direction = atan2(vy, vx);
         double speed = sqrt(vx * vx + vy * vy) * (fabs(direction) > M_PI_2 ? -1:1);
+        //单个轮子
+        for (int i = 0; i < 4; i++)
+        {
+            wheel_state_d[i].vx_ = vx - angular*wheel_state_d[i].y_;
+            wheel_state_d[i].vy_ = vy - angular*wheel_state_d[i].x_;
+            wheel_state_d[i].direction_ = atan2(wheel_state_d[i].vy_, wheel_state_d[i].vx_);
+            wheel_state_d[i].speed_ = sqrt(pow(wheel_state_d[i].vx_,2)+pow(wheel_state_d[i].vy_,2))*(fabs(wheel_state_d[i].direction_) > M_PI_2 ? -1:1);
+        }
         //先将数据置零
         for (int i = 0; i < 4; i++)
         {
             pivot_cmd_[i] = 0;
             wheel_cmd_[i] = 0;
         }
-        calculatePivot(direction, angular);
-        calculateWheel(direction, speed);
+        calculatePivot(direction, angular, wheel_state_d);
+        calculateWheel(direction, speed, wheel_state_d);
         printExpectedSpeed();
         return;
     }

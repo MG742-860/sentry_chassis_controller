@@ -239,6 +239,9 @@ class DEFAULT
         boost::any val;
         (*_i)->getValue(config, val);
 
+        if("wheel_track"==(*_i)->name){wheel_track = boost::any_cast<double>(val);}
+        if("wheel_base"==(*_i)->name){wheel_base = boost::any_cast<double>(val);}
+        if("wheel_radius"==(*_i)->name){wheel_radius = boost::any_cast<double>(val);}
         if("pivot_p_gain"==(*_i)->name){pivot_p_gain = boost::any_cast<double>(val);}
         if("pivot_i_gain"==(*_i)->name){pivot_i_gain = boost::any_cast<double>(val);}
         if("pivot_d_gain"==(*_i)->name){pivot_d_gain = boost::any_cast<double>(val);}
@@ -252,16 +255,28 @@ class DEFAULT
         if("max_speed"==(*_i)->name){max_speed = boost::any_cast<double>(val);}
         if("max_angular"==(*_i)->name){max_angular = boost::any_cast<double>(val);}
         if("max_direction"==(*_i)->name){max_direction = boost::any_cast<double>(val);}
+        if("speed_to_rotate"==(*_i)->name){speed_to_rotate = boost::any_cast<double>(val);}
+        if("speed_diff_m"==(*_i)->name){speed_diff_m = boost::any_cast<int>(val);}
         if("stop_time"==(*_i)->name){stop_time = boost::any_cast<double>(val);}
-        if("max_power"==(*_i)->name){max_power = boost::any_cast<double>(val);}
         if("enable_power_limit"==(*_i)->name){enable_power_limit = boost::any_cast<bool>(val);}
+        if("enable_power_print"==(*_i)->name){enable_power_print = boost::any_cast<bool>(val);}
+        if("max_power"==(*_i)->name){max_power = boost::any_cast<double>(val);}
+        if("k1"==(*_i)->name){k1 = boost::any_cast<double>(val);}
+        if("k2"==(*_i)->name){k2 = boost::any_cast<double>(val);}
+        if("torque_constant"==(*_i)->name){torque_constant = boost::any_cast<double>(val);}
+        if("coordinate_mode"==(*_i)->name){coordinate_mode = boost::any_cast<bool>(val);}
+        if("drive_mode"==(*_i)->name){drive_mode = boost::any_cast<int>(val);}
+        if("turn_mode"==(*_i)->name){turn_mode = boost::any_cast<int>(val);}
         if("print_expected_speed"==(*_i)->name){print_expected_speed = boost::any_cast<bool>(val);}
         if("print_expected_pivot"==(*_i)->name){print_expected_pivot = boost::any_cast<bool>(val);}
         if("print_odom"==(*_i)->name){print_odom = boost::any_cast<bool>(val);}
       }
     }
 
-    double pivot_p_gain;
+    double wheel_track;
+double wheel_base;
+double wheel_radius;
+double pivot_p_gain;
 double pivot_i_gain;
 double pivot_d_gain;
 double pivot_i_max;
@@ -274,9 +289,18 @@ double wheel_i_min;
 double max_speed;
 double max_angular;
 double max_direction;
+double speed_to_rotate;
+int speed_diff_m;
 double stop_time;
-double max_power;
 bool enable_power_limit;
+bool enable_power_print;
+double max_power;
+double k1;
+double k2;
+double torque_constant;
+bool coordinate_mode;
+int drive_mode;
+int turn_mode;
 bool print_expected_speed;
 bool print_expected_pivot;
 bool print_odom;
@@ -289,6 +313,12 @@ bool print_odom;
 
 
 
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double wheel_track;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double wheel_base;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double wheel_radius;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       double pivot_p_gain;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
@@ -316,11 +346,29 @@ bool print_odom;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       double max_direction;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double speed_to_rotate;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      int speed_diff_m;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       double stop_time;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      bool enable_power_limit;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      bool enable_power_print;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       double max_power;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      bool enable_power_limit;
+      double k1;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double k2;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      double torque_constant;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      bool coordinate_mode;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      int drive_mode;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      int turn_mode;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       bool print_expected_speed;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
@@ -466,6 +514,36 @@ bool print_odom;
     {
 SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassisConfig> Default("Default", "", 0, 0, true, &SentryChassisConfig::groups);
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.wheel_track = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.wheel_track = 10.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.wheel_track = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("wheel_track", "double", 0, "轮距", "", &SentryChassisConfig::wheel_track)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("wheel_track", "double", 0, "轮距", "", &SentryChassisConfig::wheel_track)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.wheel_base = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.wheel_base = 10.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.wheel_base = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("wheel_base", "double", 0, "轴距", "", &SentryChassisConfig::wheel_base)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("wheel_base", "double", 0, "轴距", "", &SentryChassisConfig::wheel_base)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.wheel_radius = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.wheel_radius = 10.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.wheel_radius = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("wheel_radius", "double", 0, "轮子半径", "", &SentryChassisConfig::wheel_radius)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("wheel_radius", "double", 0, "轮子半径", "", &SentryChassisConfig::wheel_radius)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.pivot_p_gain = 0.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __max__.pivot_p_gain = 10.0;
@@ -596,6 +674,26 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_direction", "double", 0, "最大转向角度(度)", "", &SentryChassisConfig::max_direction)));
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.speed_to_rotate = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.speed_to_rotate = 200.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.speed_to_rotate = 100.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("speed_to_rotate", "double", 0, "小陀螺系数控制", "", &SentryChassisConfig::speed_to_rotate)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("speed_to_rotate", "double", 0, "小陀螺系数控制", "", &SentryChassisConfig::speed_to_rotate)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.speed_diff_m = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.speed_diff_m = 200;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.speed_diff_m = 100;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<int>("speed_diff_m", "int", 0, "履带模式差速系数", "", &SentryChassisConfig::speed_diff_m)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<int>("speed_diff_m", "int", 0, "履带模式差速系数", "", &SentryChassisConfig::speed_diff_m)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.stop_time = 0.1;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __max__.stop_time = 5.0;
@@ -605,6 +703,26 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
       Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("stop_time", "double", 0, "停止时间阈值(s)", "", &SentryChassisConfig::stop_time)));
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("stop_time", "double", 0, "停止时间阈值(s)", "", &SentryChassisConfig::stop_time)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.enable_power_limit = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.enable_power_limit = 1;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.enable_power_limit = 1;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("enable_power_limit", "bool", 0, "是否启用功率限制", "", &SentryChassisConfig::enable_power_limit)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("enable_power_limit", "bool", 0, "是否启用功率限制", "", &SentryChassisConfig::enable_power_limit)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.enable_power_print = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.enable_power_print = 1;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.enable_power_print = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("enable_power_print", "bool", 0, "是否打印功率输出", "", &SentryChassisConfig::enable_power_print)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("enable_power_print", "bool", 0, "是否打印功率输出", "", &SentryChassisConfig::enable_power_print)));
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.max_power = 100.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
@@ -616,15 +734,65 @@ SentryChassisConfig::GroupDescription<SentryChassisConfig::DEFAULT, SentryChassi
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("max_power", "double", 0, "最大功率(W)", "", &SentryChassisConfig::max_power)));
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      __min__.enable_power_limit = 0;
+      __min__.k1 = 0.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      __max__.enable_power_limit = 1;
+      __max__.k1 = 1.0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      __default__.enable_power_limit = 1;
+      __default__.k1 = 0.001;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("enable_power_limit", "bool", 0, "启用功率限制", "", &SentryChassisConfig::enable_power_limit)));
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("k1", "double", 0, "计算公式的k1", "", &SentryChassisConfig::k1)));
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
-      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("enable_power_limit", "bool", 0, "启用功率限制", "", &SentryChassisConfig::enable_power_limit)));
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("k1", "double", 0, "计算公式的k1", "", &SentryChassisConfig::k1)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.k2 = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.k2 = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.k2 = 0.0001;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("k2", "double", 0, "计算公式的k2", "", &SentryChassisConfig::k2)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("k2", "double", 0, "计算公式的k2", "", &SentryChassisConfig::k2)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.torque_constant = 0.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.torque_constant = 1.0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.torque_constant = 0.005;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("torque_constant", "double", 0, "转矩常数", "", &SentryChassisConfig::torque_constant)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<double>("torque_constant", "double", 0, "转矩常数", "", &SentryChassisConfig::torque_constant)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.coordinate_mode = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.coordinate_mode = 1;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.coordinate_mode = 1;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("coordinate_mode", "bool", 0, "启用世界坐标系", "", &SentryChassisConfig::coordinate_mode)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<bool>("coordinate_mode", "bool", 0, "启用世界坐标系", "", &SentryChassisConfig::coordinate_mode)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.drive_mode = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.drive_mode = 2;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.drive_mode = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<int>("drive_mode", "int", 0, "驱动模式", "", &SentryChassisConfig::drive_mode)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<int>("drive_mode", "int", 0, "驱动模式", "", &SentryChassisConfig::drive_mode)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __min__.turn_mode = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __max__.turn_mode = 3;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __default__.turn_mode = 0;
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      Default.abstract_parameters.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<int>("turn_mode", "int", 0, "转向模式", "", &SentryChassisConfig::turn_mode)));
+//#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
+      __param_descriptions__.push_back(SentryChassisConfig::AbstractParamDescriptionConstPtr(new SentryChassisConfig::ParamDescription<int>("turn_mode", "int", 0, "转向模式", "", &SentryChassisConfig::turn_mode)));
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
       __min__.print_expected_speed = 0;
 //#line 292 "/opt/ros/noetic/lib/python3/dist-packages/dynamic_reconfigure/parameter_generator_catkin.py"
