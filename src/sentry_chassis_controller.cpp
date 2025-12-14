@@ -41,8 +41,6 @@ namespace sentry_chassis_controller {
         motion_limits_.is_enable = controller_nh.param("enable_acceleration_limits", false);
         motion_limits_.max_linear_acceleration = controller_nh.param("max_linear_acceleration", 3.0);
         motion_limits_.max_angular_acceleration = controller_nh.param("max_angular_acceleration", 5.0);
-        motion_limits_.max_linear_deceleration = controller_nh.param("max_linear_deceleration", 5.0);
-        motion_limits_.max_angular_deceleration = controller_nh.param("max_angular_deceleration", 8.0);
         //小陀螺系数
         speed_to_rotate_ = controller_nh.param("speed_to_rotate", 100.0);
         //履带模式差速系数
@@ -194,8 +192,6 @@ namespace sentry_chassis_controller {
         motion_limits_.is_enable = config.enable_acceleration_limits;
         motion_limits_.max_angular_acceleration = config.max_angular_acceleration;
         motion_limits_.max_linear_acceleration = config.max_linear_acceleration;
-        motion_limits_.max_angular_deceleration = config.max_angular_deceleration;
-        motion_limits_.max_linear_deceleration = config.max_linear_deceleration;
         stop_time_ = config.stop_time;
         
         // 更新小陀螺系数控制和履带模式差速系数
@@ -409,40 +405,28 @@ namespace sentry_chassis_controller {
 
     void SentryChassisController::applyAccelerationLimits(double& vx_target, double& vy_target, double& omega_target, const ros::Duration& period)
     {
+        if(!motion_limits_.is_enable) return;
         // 计算速度变化量
         double delta_vx = vx_target - motion_limits_.last_vx_;
         double delta_vy = vy_target - motion_limits_.last_vy_;
         double delta_omega = omega_target - motion_limits_.last_omega_;
-        
-        // 计算合速度大小
-        double current_speed = sqrt(motion_limits_.last_vx_*motion_limits_.last_vx_ + motion_limits_.last_vy_*motion_limits_.last_vy_);
-        double target_speed = sqrt(vx_target*vx_target + vy_target*vy_target);
-        
-        // 判断是加速还是减速
-        bool is_accelerating = (target_speed > current_speed);
-        double max_linear_accel = is_accelerating ? 
-            motion_limits_.max_linear_acceleration : motion_limits_.max_linear_deceleration;
-        double max_angular_accel = is_accelerating ? 
-            motion_limits_.max_angular_acceleration : motion_limits_.max_angular_deceleration;
-        
-        // 限制线加速度
-        double max_delta_linear = max_linear_accel * period.toSec();
-        double delta_speed = sqrt(delta_vx*delta_vx + delta_vy*delta_vy);
-        
-        if (delta_speed > max_delta_linear) {
-            // 按比例缩放速度增量
-            double scale = max_delta_linear / delta_speed;
-            vx_target = motion_limits_.last_vx_ + delta_vx * scale;
-            vy_target = motion_limits_.last_vy_ + delta_vy * scale;
+        //是否超过加速度
+        if (fabs(delta_vx) / (period).toSec() > motion_limits_.max_linear_acceleration)
+        {
+            //缩放vx
+            vx_target = ((period).toSec() * motion_limits_.max_linear_acceleration)*(vx_target/fabs(vx_target)) + motion_limits_.last_vx_;
         }
-        
-        // 限制角加速度
-        double max_delta_angular = max_angular_accel * period.toSec();
-        if (fabs(delta_omega) > max_delta_angular) {
-            omega_target = motion_limits_.last_omega_ + copysign(max_delta_angular, delta_omega);
+        if (fabs(delta_vy) / (period).toSec() > motion_limits_.max_linear_acceleration)
+        {
+            //缩放vy
+            vy_target = ((period).toSec() * motion_limits_.max_linear_acceleration)*(vy_target/fabs(vy_target)) + motion_limits_.last_vy_;
         }
-        
-        // 更新记录的速度值
+        if (fabs(delta_omega) / (period).toSec() > motion_limits_.max_angular_acceleration)
+        {
+            //缩放angular
+            omega_target = ((period).toSec() * motion_limits_.max_angular_acceleration)*(delta_omega/fabs(delta_omega)) + motion_limits_.last_omega_;
+        }
+        //更新速度
         motion_limits_.last_vx_ = vx_target;
         motion_limits_.last_vy_ = vy_target;
         motion_limits_.last_omega_ = omega_target;
@@ -920,6 +904,8 @@ namespace sentry_chassis_controller {
         if ((time - last_update_time_).toSec() > stop_time_)
         {
             received_msg_ = false, last_update_time_ = time;
+            gotten_msg.angular.x = 0, gotten_msg.angular.y = 0, gotten_msg.angular.z = 0;
+            gotten_msg.linear.x = 0, gotten_msg.linear.y = 0, gotten_msg.linear.z = 0;
         }
         //先计算里程计，确保用到的robot_state_.theta是最新的
         calculateOdometry(period);

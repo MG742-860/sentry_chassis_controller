@@ -15,7 +15,8 @@
 #include <dynamic_reconfigure/server.h>
 #include <Eigen/Dense>
 #include <Eigen/QR>
-#include "sentry_chassis_controller/SentryChassisConfig.h"
+//#include "sentry_chassis_controller/SentryChassisConfig.h"
+#include "../../../devel/include/sentry_chassis_controller/SentryChassisConfig.h"
 namespace sentry_chassis_controller{
 
     enum DriveMode{
@@ -71,8 +72,6 @@ namespace sentry_chassis_controller{
         bool is_enable = false;
         double max_linear_acceleration = 3.0;   // 最大线加速度 (m/s²)
         double max_angular_acceleration = 5.0;  // 最大角加速度 (rad/s²)
-        double max_linear_deceleration = 5.0;   // 最大线减速度 (m/s²)
-        double max_angular_deceleration = 8.0;  // 最大角减速度 (rad/s²)
         double last_vx_ = 0.0, last_vy_ = 0.0, last_omega_ = 0.0;//上一次的数据
     };
 

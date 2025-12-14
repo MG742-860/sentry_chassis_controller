@@ -26,8 +26,6 @@ sentry_chassis_controller:
   enable_acceleration_limits: false
   max_linear_acceleration: 3.0    # 最大线加速度 (m/s²)
   max_angular_acceleration: 5.0   # 最大角加速度 (rad/s²)
-  max_linear_deceleration: 5.0    # 最大线减速度 (m/s²)
-  max_angular_deceleration: 8.0   # 最大角减速度 (rad/s²)
 
   # 小车无输入信号停止阈值
   stop_time: 0.5
