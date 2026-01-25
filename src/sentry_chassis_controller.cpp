@@ -768,7 +768,7 @@ namespace sentry_chassis_controller {
 
         //调试输出
         static ros::Time last_caculate_time;
-        if ((ros::Time::now() - last_caculate_time).toSec() > 1.0 && power_mgt_.is_print_) {
+        if ((ros::Time::now() - last_caculate_time).toSec() > 0.6 && power_mgt_.is_print_) {
             ROS_INFO("Power limit: P_in=%.1fW, P_max=%.1fW, k=%.3f", P_in, power_mgt_.max_power_, k);
             last_caculate_time = ros::Time::now();
         }

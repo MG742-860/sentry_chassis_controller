@@ -96,6 +96,7 @@ namespace sentry_chassis_controller{
 
             //回调函数
             void CmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg);
+            
             void convertToRobotFrame(double& robot_x, double& robot_y, double& robot_angular);//(轮子)坐标变换函数 odom -> base_link
             //计算轮子速度和转向角度
             void calculateWheel(double direction, double speed, wheel_state wheel_state_[]);
@@ -121,7 +122,7 @@ namespace sentry_chassis_controller{
             void stopping(const ros::Time& time) override;
             bool init(hardware_interface::EffortJointInterface *effort_joint_interface, ros::NodeHandle &root_nh, ros::NodeHandle &controller_nh) override;
             void update(const ros::Time &time, const ros::Duration &period) override;
-        private:
+        private:  
             //关节句柄类
             hardware_interface::JointHandle front_left_pivot_joint_, front_right_pivot_joint_, back_left_pivot_joint_, back_right_pivot_joint_;
             hardware_interface::JointHandle front_left_wheel_joint_, front_right_wheel_joint_, back_left_wheel_joint_, back_right_wheel_joint_;
